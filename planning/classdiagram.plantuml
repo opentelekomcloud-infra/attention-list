@@ -1,0 +1,14 @@
+@startuml Hello World
+Dummy --|> Flight
+
+class Dummy {
+  String data
+  void methods()
+}
+
+class Flight {
+   flightNumber : Integer
+   departureTime : Date
+   muh()
+}
+@enduml
