@@ -1,14 +1,27 @@
 @startuml Hello World
-Dummy --|> Flight
-
-class Dummy {
-  String data
-  void methods()
+class AttentionList {
+  config: dict
+  main()
+  create_parser()
+  parse_args()
+  create_result()
 }
 
-class Flight {
-   flightNumber : Integer
-   departureTime : Date
-   muh()
+class AttentionListConfig{
+   config: dict
+}
+
+class FailedPR{
+  created_at: String
+  host: String
+  updated_at: String
+  url: String
+  error: String = None
+  host: String = None
+  org: String = None
+  pullrequest: String = None
+  repo: String = None
+  status: String = None
+  zuul_url: String = None
 }
 @enduml
