@@ -13,11 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Error Codes
-# 1000: Failed check (default error)
-# 1001: Check not existing but expected
-
 import argparse
+
+
+class AttentionListZuul():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        subparsers = parser.add_subparsers()
+        subparsers_chooser = subparsers.add_parser('miau')
+        subparsers_chooser = subparsers.add_parser('muh')
+
+
+class AlPRLister():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        parser.add_argument('option')
+
+
+class AttentionListPR():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        subparsers = parser.add_subparsers()
+        subcontroller = subparsers.add_parser('list')
+        AlPRLister.argparse_arguments(subcontroller)
+        
+        subcontroller = subparsers.add_parser('del')
 
 
 class AttentionList:
@@ -26,17 +46,26 @@ class AttentionList:
     
     def create_parser(self):
         parser = argparse.ArgumentParser(description="AttentionList Controller")
-        parser.add_argument(
-            "--config",
-            dest="config",
-            default="config.yaml",
-            help="specify the config file",
-        )
-        subparsers = parser.add_subparsers(help="command help")
+        subparsers = parser.add_subparsers()
+
+        controller_parser = subparsers.add_parser('pr', help="pr parser")
+        AttentionListPR.argparse_arguments(controller_parser)
+
+
+        controller_parser = subparsers.add_parser('zuul', help="zuul parser")
+        AttentionListZuul.argparse_arguments(controller_parser)
+
         
-        AttentionListPR.argparse_arguments(subparsers)
+        return parser
+
+    def parse_arguments(self, args=None):
+        parser = self.create_parser()
+        self.args = parser.parse_args(args)
 
         return parser
+    
+    def main(self):
+        self.parse_arguments()
 
 def main():
     AttentionList().main()
