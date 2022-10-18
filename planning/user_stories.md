@@ -46,7 +46,7 @@ al pull request list orphans
 ### User Story: Branches without open PR  
 A user runs the tool to list all branches which do not have open Pull Request at all and might be deleted.
 
-al branches list empty
+al branch list empty
 ### User Story: Old Pull Requests
 A user runs the tool to list all Pull Requests older then a particular age.
 

@@ -16,28 +16,46 @@
 import argparse
 
 
-class AttentionListZuul():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        subparsers = parser.add_subparsers()
-        subparsers_chooser = subparsers.add_parser('miau')
-        subparsers_chooser = subparsers.add_parser('muh')
-
-
 class AlPRLister():
     @classmethod
     def argparse_arguments(cls, parser):
-        parser.add_argument('option')
+        parser.add_argument(dest='option')
 
 
-class AttentionListPR():
+class AlPR():
     @classmethod
     def argparse_arguments(cls, parser):
         subparsers = parser.add_subparsers()
         subcontroller = subparsers.add_parser('list')
         AlPRLister.argparse_arguments(subcontroller)
-        
-        subcontroller = subparsers.add_parser('del')
+
+
+class AlRepoLister():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        parser.add_argument('option')
+
+
+class AlRepo():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        subparsers = parser.add_subparsers()
+        subcontroller = subparsers.add_parser('list')
+        AlRepoLister.argparse_arguments(subcontroller)
+
+
+class AlZuulLister():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        parser.add_argument('option')
+
+
+class AlZuul():
+    @classmethod
+    def argparse_arguments(cls, parser):
+        subparsers = parser.add_subparsers()
+        subcontroller = subparsers.add_parser('list')
+        AlRepoLister.argparse_arguments(subcontroller)
 
 
 class AttentionList:
@@ -49,13 +67,14 @@ class AttentionList:
         subparsers = parser.add_subparsers()
 
         controller_parser = subparsers.add_parser('pr', help="pr parser")
-        AttentionListPR.argparse_arguments(controller_parser)
+        AlPR.argparse_arguments(controller_parser)
 
+        controller_parser = subparsers.add_parser('repo', help="repo parser")
+        AlRepo.argparse_arguments(controller_parser)
 
         controller_parser = subparsers.add_parser('zuul', help="zuul parser")
-        AttentionListZuul.argparse_arguments(controller_parser)
-
-        
+        AlZuul.argparse_arguments(controller_parser)
+       
         return parser
 
     def parse_arguments(self, args=None):
@@ -66,6 +85,12 @@ class AttentionList:
     
     def main(self):
         self.parse_arguments()
+        if self.args:
+            print(self.args)
+        if self.args.pr_lister:
+            pass
+        elif self.args.zuul_lister:
+            pass
 
 def main():
     AttentionList().main()
