@@ -86,11 +86,7 @@ class AttentionList:
     def main(self):
         self.parse_arguments()
         if self.args:
-            print(self.args)
-        if self.args.pr_lister:
-            pass
-        elif self.args.zuul_lister:
-            pass
+            print(self.args.__name__)
 
 def main():
     AttentionList().main()
