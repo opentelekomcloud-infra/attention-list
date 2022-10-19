@@ -14,6 +14,22 @@
 # limitations under the License.
 
 import argparse
+import yaml
+from yaml.loader import SafeLoader
+
+
+
+class PrLister:
+    def __init__(self, config, args):
+        self.config = config
+        self.args = args
+        print(self.config)
+        print(self.args)
+
+    @classmethod
+    def exec(cls, config, args):
+        cls.__init__(cls, config=config, args=args)
+    
 
 
 class AttentionList:
@@ -21,7 +37,13 @@ class AttentionList:
         self.config = None
     
     def create_parser(self):
-        parser = argparse.ArgumentParser(description="AttentionList Controller")
+        parser = argparse.ArgumentParser(
+            description='AttentionList - A tool collecting '
+                        'issues about Helpcenter 2.0')
+        parser.add_argument(
+            '--config',
+            default='config.yaml',
+            help='Path and name to yaml configuration file')
         self.createCommandParsers(parser)
         
         return parser
@@ -119,9 +141,14 @@ class AttentionList:
         print('Branch Lister')
 
     def pr_lister(self):
-        print('PR Lister')
-        if self.args.failed:
-            print(self.args.failed)
+        if not (
+            self.args.failed or
+            self.args.open or
+            self.args.timeout or
+            self.args.orphans or
+            self.args.older):
+            raise Exception('PullRequest list parameter missing.')
+        PrLister.exec(config=self.config, args=self.args)
     
     def metadata_lister(self):
         print('Metadata Lister')
@@ -133,12 +160,17 @@ class AttentionList:
         self.parser = self.create_parser()
         self.args = self.parser.parse_args(args)
     
+    def create_config(self):
+        with open(self.args.config) as f:
+            self.config = yaml.load(f, Loader=SafeLoader)
+    
     def main(self, args=None):
         self.parse_arguments(args)
+        self.create_config()
         try:
             self.args.func()
         except Exception as e:
-            print(e)
+            print('ERROR AttentionList.main(): ' + str(e))
 
 def main():
     AttentionList().main()
