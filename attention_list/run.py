@@ -16,77 +16,129 @@
 import argparse
 
 
-class AlPRLister():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        parser.add_argument(dest='option')
-
-
-class AlPR():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        subparsers = parser.add_subparsers()
-        subcontroller = subparsers.add_parser('list')
-        AlPRLister.argparse_arguments(subcontroller)
-
-
-class AlRepoLister():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        parser.add_argument('option')
-
-
-class AlRepo():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        subparsers = parser.add_subparsers()
-        subcontroller = subparsers.add_parser('list')
-        AlRepoLister.argparse_arguments(subcontroller)
-
-
-class AlZuulLister():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        parser.add_argument('option')
-
-
-class AlZuul():
-    @classmethod
-    def argparse_arguments(cls, parser):
-        subparsers = parser.add_subparsers()
-        subcontroller = subparsers.add_parser('list')
-        AlRepoLister.argparse_arguments(subcontroller)
-
-
 class AttentionList:
     def __init__(self):
         self.config = None
     
     def create_parser(self):
         parser = argparse.ArgumentParser(description="AttentionList Controller")
-        subparsers = parser.add_subparsers()
-
-        controller_parser = subparsers.add_parser('pr', help="pr parser")
-        AlPR.argparse_arguments(controller_parser)
-
-        controller_parser = subparsers.add_parser('repo', help="repo parser")
-        AlRepo.argparse_arguments(controller_parser)
-
-        controller_parser = subparsers.add_parser('zuul', help="zuul parser")
-        AlZuul.argparse_arguments(controller_parser)
-       
+        self.createCommandParsers(parser)
+        
         return parser
+
+    def createCommandParsers(self, parser):
+        subparsers = parser.add_subparsers(title='commands')
+
+        self.add_branch_subparser(subparsers)
+        self.add_metadata_subparser(subparsers)
+        self.add_pr_subparser(subparsers)
+        self.add_zuul_subparser(subparsers)
+  
+        return subparsers
+    
+    def add_branch_subparser(self, subparsers):
+        cmd_branch = subparsers.add_parser('branch', help='Branch parser')
+        cmd_branch_subparsers = cmd_branch.add_subparsers()
+
+        self.add_branch_list_subparser(cmd_branch_subparsers)
+    
+    def add_branch_list_subparser(self, subparsers):
+        cmd_branch_list = subparsers.add_parser('list', help='Branch lister parser')
+        cmd_branch_list.add_argument(
+            '--empty',
+            action='store_true',
+            help='List empty branches')
+    
+    def add_metadata_subparser(self, subparsers):
+        cmd_metadata = subparsers.add_parser('metadata', help='Metadata parser')
+        cmd_metadata_subparsers = cmd_metadata.add_subparsers()
+
+        self.add_metadata_list_subparser(cmd_metadata_subparsers)
+    
+    def add_metadata_list_subparser(self, subparsers):
+        cmd_metadata_list = subparsers.add_parser('list', help='Metadata lister parser')
+        cmd_metadata_list.add_argument(
+            '--not-existing-folders',
+            action='store_true',
+            help='List not existing folders in metadata/services.yaml')
+
+        cmd_metadata_list.set_defaults(func=self.metadata_lister)
+
+    def add_pr_subparser(self, subparsers):
+        cmd_pr = subparsers.add_parser('pr', help='PR parser')
+        cmd_pr_subparsers = cmd_pr.add_subparsers()
+
+        self.add_pr_list_subparser(cmd_pr_subparsers)
+    
+    def add_pr_list_subparser(self, subparsers):
+        cmd_pr_list = subparsers.add_parser('list', help='PR lister parser')
+        cmd_pr_list.add_argument(
+            '--failed',
+            action='store_true',
+            help='List failed PRs')
+        cmd_pr_list.add_argument(
+            '--open',
+            action='store_true',
+            help='List open PRs')
+        cmd_pr_list.add_argument(
+            '--timeout',
+            action='store_true',
+            help='List timeout PRs')
+        cmd_pr_list.add_argument(
+            '--orphans',
+            action='store_true',
+            help='List orphan PRs')
+        cmd_pr_list.add_argument(
+            '--older',
+            type=int,
+            metavar='DAYS',
+            help='List PRs older than <value in days>')
+
+        cmd_pr_list.set_defaults(func=self.pr_lister)
+
+    def add_zuul_subparser(self, subparsers):
+        cmd_zuul = subparsers.add_parser('zuul', help='Zuul parser')
+        cmd_zuul_subparsers = cmd_zuul.add_subparsers()
+
+        self.add_zuul_list_subparser(cmd_zuul_subparsers)
+    
+    def add_zuul_list_subparser(self, subparsers):
+        cmd_zuul_list = subparsers.add_parser('list', help='Zuul lister parser')
+        cmd_zuul_list.add_argument(
+            '--error',
+            action='store_true',
+            help='List Zuul errors.')
+        cmd_zuul_list.add_argument(
+            '--unknown-repos',
+            action='store_true',
+            help='List unknown repositories for Zuul.')
+
+        cmd_zuul_list.set_defaults(func=self.zuul_lister)
+
+    def branch_lister(self):
+        print('Branch Lister')
+
+    def pr_lister(self):
+        print('PR Lister')
+        if self.args.failed:
+            print(self.args.failed)
+    
+    def metadata_lister(self):
+        print('Metadata Lister')
+    
+    def zuul_lister(self):
+        print('Zuul Lister')
 
     def parse_arguments(self, args=None):
-        parser = self.create_parser()
-        self.args = parser.parse_args(args)
-
-        return parser
+        self.parser = self.create_parser()
+        self.args = self.parser.parse_args(args)
     
-    def main(self):
-        self.parse_arguments()
-        if self.args:
-            print(self.args.__name__)
+    def main(self, args=None):
+        self.parse_arguments(args)
+        try:
+            self.args.func()
+        except Exception as e:
+            print(e)
 
 def main():
     AttentionList().main()
