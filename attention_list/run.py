@@ -14,22 +14,27 @@
 # limitations under the License.
 
 import argparse
+import logging
 import yaml
 from yaml.loader import SafeLoader
-
 
 
 class PrLister:
     def __init__(self, config, args):
         self.config = config
         self.args = args
-        print(self.config)
-        print(self.args)
 
     @classmethod
     def exec(cls, config, args):
         cls.__init__(cls, config=config, args=args)
     
+
+class AlConfig():
+    def __init__(self):
+        self.config = None
+    
+    def print(self):
+        print(self.config)
 
 
 class AttentionList:
@@ -44,6 +49,16 @@ class AttentionList:
             '--config',
             default='config.yaml',
             help='Path and name to yaml configuration file')
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Set debug mode on.'
+        )
+        parser.add_argument(
+            '--yaml',
+            action='store_true',
+            help='Set yaml output format instead of json.'
+        )
         self.createCommandParsers(parser)
         
         return parser
@@ -160,17 +175,28 @@ class AttentionList:
         self.parser = self.create_parser()
         self.args = self.parser.parse_args(args)
     
-    def create_config(self):
-        with open(self.args.config) as f:
-            self.config = yaml.load(f, Loader=SafeLoader)
+    def read_config_file(self):
+        try:
+            with open(self.args.config) as f:
+                config = yaml.load(f, Loader=SafeLoader)
+        except Exception as e:
+            print('ERROR while loading config file: ' + self.args.config)
+        return config
     
     def main(self, args=None):
         self.parse_arguments(args)
-        self.create_config()
+
+        if self.args.debug:
+            logging.basicConfig(level=logging.DEBUG)
+
+        self.config = AlConfig()
+        self.config.config = self.read_config_file()
+        # self.config.print()
+
         try:
             self.args.func()
         except Exception as e:
-            print('ERROR AttentionList.main(): ' + str(e))
+            print('ERROR in self.args.func(): ' + str(e))
 
 def main():
     AttentionList().main()

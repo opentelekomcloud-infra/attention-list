@@ -1,0 +1,9 @@
+---
+pr_list_failed:
+  github_orgs:
+    - 'opentelekcloud-docs'
+  gitea_orgs:
+    - 'docs'
+  git_hoster:
+    - 'gitea'
+    - 'github'
