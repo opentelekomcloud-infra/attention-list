@@ -14,23 +14,22 @@
 # limitations under the License.
 
 
+import json
+import yaml
+import requests
+import json
+import re
+import os
+import yaml
+
 git_hoster = ['gitea', 'github']
 github_api_url = 'https://api.github.com/'
+
 
 class PrLister:
     def __init__(self, config, args):
         self.config = config.get_config()
         self.args = args
-        self.created_at = None
-        self.error = None
-        self.host = None
-        self.org = None
-        self.pullrequest = None
-        self.repo = None
-        self.status = None
-        self.updated_at = None
-        self.url = None
-        self.zuul_url = None
     
     def print_config(self):
         print(self.config)
@@ -42,96 +41,126 @@ class PrLister:
         for h in hoster:
             if h['name'] not in git_hoster:
                 raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
-            elif not h['api_url']:
+            if not h['api_url']:
                     raise Exception('git_hoster[\'api_url\'] missing '
                                     'for git_hoster: ' + h['name'])
-            elif (not h['orgs']) or (not isinstance(h['orgs'], list)):
+            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
                     raise Exception('git_hoster[\'orgs\'] missing '
                                     'or not type of list for git_hoster: '
                                     + h['name'])
-        
+    
+    def get_headers(self, hoster, args):
+        headers = {}
+        headers['accept'] = 'application/json'
+        headers['Authorization'] = 'token ' + get_token(
+            hoster=hoster,
+            args=args
+        )
 
+        return headers
+    
+    def get_gitea_repos(url, headers, gitea_org):
+        """
+        Get all Repositories of one Gitea orgainzation
+        """
+        repositories = []
+        i = 1
+
+        while True:
+            try:
+                req_url = (url
+                        + 'orgs/'
+                        + gitea_org
+                        + '/repos?limit=50&page='
+                        + str(i))
+                res = requests.request('GET', url=req_url, headers=headers)
+                i += 1
+                if res.json():
+                    for repo in res.json():
+                        repositories.append(repo)
+                    continue
+                else:
+                    break
+            except Exception as e:
+                print("An error has occured: " + str(e))
+                print("The request status is: " + str(res.status_code) +
+                    " | " + str(res.reason))
+                break
+        return repositories
+        
     def list_failed_pr(self):
         self.print_config()
         self.check_config()
-        exit()
         self.hoster = self.config['pr_list_failed']['git_hoster']
 
         failed_commits = []
         for h in self.hoster:
             if h['name'] == 'gitea':
-### stop point
-                headers = {}
-                headers['accept'] = 'application/json'
-                headers['Authorization'] = 'token ' + get_token(
-                    hoster=h,
-                    args=args
+                headers = self.get_headers(
+                    hoster=h['name'],
+                    args=self.args
                 )
-
-                if not args.gitea_url:
-                    raise Exception('Please, provide Gitea URL as argument.')
-
-                for org in args.gitea_orgs:
+                for org in h['orgs']:
                     repos = get_gitea_repos(
-                        url=args.gitea_url,
+                        url=h['api_url'],
                         headers=headers,
                         gitea_org=org
                     )
                     for repo in repos:
-                        pulls = get_gitea_prs(
-                            url=args.gitea_url,
-                            headers=headers,
-                            gitea_org=org,
-                            repo=repo['name']
-                        )
-                        if pulls:
-                            for pull in pulls:
-                                commits = get_gitea_failed_commits(
-                                    pull=pull,
-                                    url=args.gitea_url,
-                                    gitea_org=org,
-                                    repo=repo,
-                                    headers=headers
-                                )
-                                failed_commits.extend(commits)
+                        print(repo)
+                        # pulls = get_gitea_prs(
+                        #     url=h['api_url'],
+                        #     headers=headers,
+                        #     gitea_org=org,
+                        #     repo=repo['name']
+                        # )
+                        # if pulls:
+                        #     for pull in pulls:
+                        #         commits = get_gitea_failed_commits(
+                        #             pull=pull,
+                        #             url=h['api_url'],
+                        #             gitea_org=org,
+                        #             repo=repo,
+                        #             headers=headers
+                        #         )
+                        #         failed_commits.extend(commits)
 
-            elif h == 'github':
-                if not args.github_url:
-                    raise ValueError('Parameter --github-url not found.')
-                url = args.github_url
-                headers = {}
-                headers['accept'] = 'application/json'
-                headers['Authorization'] = 'Bearer ' + get_token(
-                    hoster=h,
-                    args=args
-                )
+            # elif h == 'github':
+            #     if not args.github_url:
+            #         raise ValueError('Parameter --github-url not found.')
+            #     url = args.github_url
+            #     headers = {}
+            #     headers['accept'] = 'application/json'
+            #     headers['Authorization'] = 'Bearer ' + get_token(
+            #         hoster=h,
+            #         args=args
+            #     )
 
-                for org in args.github_orgs:
-                    repos = get_github_repos(
-                        url=url,
-                        headers=headers,
-                        github_org=org
-                    )
-                    for repo in repos:
-                        pulls = get_github_prs(
-                            url=url,
-                            headers=headers,
-                            github_org=org,
-                            repo=repo['name']
-                        )
-                        if pulls:
-                            for pull in pulls:
-                                commits = get_github_failed_commits(
-                                    pull=pull,
-                                    url=url,
-                                    github_org=org,
-                                    repo=repo,
-                                    headers=headers
-                                )
-                                failed_commits.extend(commits)
-            else:
-                raise ValueError("No supported hoster found.")
-
+            #     for org in args.github_orgs:
+            #         repos = get_github_repos(
+            #             url=url,
+            #             headers=headers,
+            #             github_org=org
+            #         )
+            #         for repo in repos:
+            #             pulls = get_github_prs(
+            #                 url=url,
+            #                 headers=headers,
+            #                 github_org=org,
+            #                 repo=repo['name']
+            #             )
+            #             if pulls:
+            #                 for pull in pulls:
+            #                     commits = get_github_failed_commits(
+            #                         pull=pull,
+            #                         url=url,
+            #                         github_org=org,
+            #                         repo=repo,
+            #                         headers=headers
+            #                     )
+            #                     failed_commits.extend(commits)
+        
+        exit()
         result = create_result(failed_commits=failed_commits)
         if args.yaml:
             result = yaml.dump(result)
