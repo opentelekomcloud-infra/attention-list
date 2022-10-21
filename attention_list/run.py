@@ -18,23 +18,16 @@ import logging
 import yaml
 from yaml.loader import SafeLoader
 
+# after building package: plugin -> attention_list.plugin
+from plugin import pr_lister
 
-class PrLister:
-    def __init__(self, config, args):
-        self.config = config
-        self.args = args
-
-    @classmethod
-    def exec(cls, config, args):
-        cls.__init__(cls, config=config, args=args)
-    
 
 class AlConfig():
     def __init__(self):
         self.config = None
     
-    def print(self):
-        print(self.config)
+    def get_config(self):
+        return self.config
 
 
 class AttentionList:
@@ -163,7 +156,8 @@ class AttentionList:
             self.args.orphans or
             self.args.older):
             raise Exception('PullRequest list parameter missing.')
-        PrLister.exec(config=self.config, args=self.args)
+        lister = pr_lister.PrLister(config=self.config, args=self.args)
+        lister.list_failed_pr()
     
     def metadata_lister(self):
         print('Metadata Lister')
@@ -191,12 +185,9 @@ class AttentionList:
 
         self.config = AlConfig()
         self.config.config = self.read_config_file()
-        # self.config.print()
 
-        try:
-            self.args.func()
-        except Exception as e:
-            print('ERROR in self.args.func(): ' + str(e))
+        self.args.func()
+
 
 def main():
     AttentionList().main()
