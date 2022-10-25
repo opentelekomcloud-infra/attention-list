@@ -171,59 +171,7 @@ def get_gitea_repos(url, headers, gitea_org):
     return repositories
 
 
-def get_gitea_prs(url, headers, gitea_org, repo):
-    """
-    Collect all Pull Requests of a Gitea Repository
-    """
-    pullrequests = []
 
-    try:
-        req_url = (url + 'repos/' + gitea_org + '/'
-                   + repo + '/pulls?state=open')
-        res = requests.request('GET', url=req_url, headers=headers)
-        if res.json():
-            for pr in res.json():
-                pullrequests.append(pr)
-    except Exception as e:
-        print("An error has occured: " + str(e))
-        print("The request status is: " + str(res.status_code) +
-              " | " + str(res.reason))
-        exit()
-    return pullrequests
-
-
-def get_gitea_failed_commits(pull, url, gitea_org, repo, headers):
-    """
-    Collect all failed gitea commits of one repository.
-    """
-    failed_commits = []
-    try:
-        req_url = (url + 'repos/' + gitea_org + '/' + repo['name'] +
-                   '/commits/' + pull['head']['ref'] + '/statuses?limit=1')
-        res_sta = requests.request('GET', url=req_url, headers=headers)
-        if res_sta.json():
-            if res_sta.json()[0]['status'] == 'failure':
-                zuul_url = res_sta.json()[0]['target_url']
-                o = FailedPR(
-                    host='gitea',
-                    url=pull['url'],
-                    org=gitea_org,
-                    repo=repo['name'],
-                    pullrequest=pull['title'],
-                    status=res_sta.json()[0]['status'],
-                    zuul_url=zuul_url,
-                    created_at=pull['created_at'],
-                    updated_at=res_sta.json()[0]['updated_at'],
-                    error=1000
-                )
-                o = add_builds_to_obj(obj=o, url=zuul_url, tenant='gl')
-                failed_commits.append(o)
-
-    except Exception as e:
-        print("An error has occured: " + str(e))
-        print("The request status is: " + str(res_sta.status_code) +
-              " | " + str(res_sta.reason))
-    return failed_commits
 
 
 def get_github_repos(url, headers, github_org):

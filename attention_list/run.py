@@ -123,6 +123,12 @@ class AttentionList:
             type=int,
             metavar='DAYS',
             help='List PRs older than <value in days>')
+        cmd_pr_list.add_argument(
+            '--github-token',
+            help='Provide GitHub token via CLI')
+        cmd_pr_list.add_argument(
+            '--gitea-token',
+            help='Provide Gitea token via CLI')
 
         cmd_pr_list.set_defaults(func=self.pr_lister)
 
@@ -186,7 +192,12 @@ class AttentionList:
         self.config = AlConfig()
         self.config.config = self.read_config_file()
 
+        # Rework
+        # try:
         self.args.func()
+        # except Exception:
+            # self.parser.print_help()
+            
 
 
 def main():
