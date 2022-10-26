@@ -42,9 +42,17 @@ def get_token(hoster, args):
 def get_headers(hoster, args):
     headers = {}
     headers['accept'] = 'application/json'
-    headers['Authorization'] = 'token ' + get_token(
-        hoster=hoster,
-        args=args
-    )
+    if hoster == 'gitea':
+        headers['Authorization'] = 'token ' + get_token(
+            hoster=hoster,
+            args=args
+        )
+    elif hoster == 'github':
+        headers['Authorization'] = 'Bearer ' + get_token(
+            hoster=hoster,
+            args=args
+        )
+    else:
+        raise Exception('No hoster found in get_headers().')
 
     return headers

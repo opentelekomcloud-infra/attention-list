@@ -15,6 +15,7 @@
 
 import argparse
 import logging
+import json
 import yaml
 from yaml.loader import SafeLoader
 
@@ -163,7 +164,7 @@ class AttentionList:
             self.args.older):
             raise Exception('PullRequest list parameter missing.')
         lister = pr_lister.PrLister(config=self.config, args=self.args)
-        lister.list_failed_pr()
+        self.create_result(lister.list_failed_pr())
     
     def metadata_lister(self):
         print('Metadata Lister')
@@ -183,6 +184,17 @@ class AttentionList:
             print('ERROR while loading config file: ' + self.args.config)
         return config
     
+    def create_result(self, data):
+        if data:
+            if self.args.yaml:
+                result = yaml.dump(data)
+            else:
+                result= json.dumps(data)
+        else:
+            raise("Result data missing")
+        
+        print(result)
+
     def main(self, args=None):
         self.parse_arguments(args)
 
@@ -197,6 +209,7 @@ class AttentionList:
         self.args.func()
         # except Exception:
             # self.parser.print_help()
+
             
 
 

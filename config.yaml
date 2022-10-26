@@ -1,13 +1,13 @@
 ---
 pr_list_failed:
   git_hoster:
-    # - name: 'github'
-    #   api_url: 'https://api.github.com/'
-    #   orgs:
-    #     - 'opentelekcloud-docs'
-    #   repos:
-    - name: 'gitea'
-      api_url: 'https://gitea.eco.tsi-dev.otc-service.com/api/v1/'
+    - name: 'github'
+      api_url: 'https://api.github.com/'
       orgs:
-        - docs
+        - 'opentelekcloud-docs'
       repos:
+    # - name: 'gitea'
+    #   api_url: 'https://gitea.eco.tsi-dev.otc-service.com/api/v1/'
+    #   orgs:
+    #     - docs
+    #   repos:
