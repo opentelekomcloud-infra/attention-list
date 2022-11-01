@@ -26,7 +26,7 @@ from plugin import pr_lister
 class AlConfig():
     def __init__(self):
         self.config = None
-    
+
     def get_config(self):
         return self.config
 
@@ -34,7 +34,7 @@ class AlConfig():
 class AttentionList:
     def __init__(self):
         self.config = None
-    
+
     def create_parser(self):
         parser = argparse.ArgumentParser(
             description='AttentionList - A tool collecting '
@@ -54,7 +54,7 @@ class AttentionList:
             help='Set yaml output format instead of json.'
         )
         self.createCommandParsers(parser)
-        
+
         return parser
 
     def createCommandParsers(self, parser):
@@ -64,30 +64,36 @@ class AttentionList:
         self.add_metadata_subparser(subparsers)
         self.add_pr_subparser(subparsers)
         self.add_zuul_subparser(subparsers)
-  
+
         return subparsers
-    
+
     def add_branch_subparser(self, subparsers):
         cmd_branch = subparsers.add_parser('branch', help='Branch parser')
         cmd_branch_subparsers = cmd_branch.add_subparsers()
 
         self.add_branch_list_subparser(cmd_branch_subparsers)
-    
+
     def add_branch_list_subparser(self, subparsers):
-        cmd_branch_list = subparsers.add_parser('list', help='Branch lister parser')
+        cmd_branch_list = subparsers.add_parser(
+            'list',
+            help='Branch lister parser')
         cmd_branch_list.add_argument(
             '--empty',
             action='store_true',
             help='List empty branches')
-    
+
     def add_metadata_subparser(self, subparsers):
-        cmd_metadata = subparsers.add_parser('metadata', help='Metadata parser')
+        cmd_metadata = subparsers.add_parser(
+            'metadata',
+            help='Metadata parser')
         cmd_metadata_subparsers = cmd_metadata.add_subparsers()
 
         self.add_metadata_list_subparser(cmd_metadata_subparsers)
-    
+
     def add_metadata_list_subparser(self, subparsers):
-        cmd_metadata_list = subparsers.add_parser('list', help='Metadata lister parser')
+        cmd_metadata_list = subparsers.add_parser(
+            'list',
+            help='Metadata lister parser')
         cmd_metadata_list.add_argument(
             '--not-existing-folders',
             action='store_true',
@@ -100,9 +106,11 @@ class AttentionList:
         cmd_pr_subparsers = cmd_pr.add_subparsers()
 
         self.add_pr_list_subparser(cmd_pr_subparsers)
-    
+
     def add_pr_list_subparser(self, subparsers):
-        cmd_pr_list = subparsers.add_parser('list', help='PR lister parser')
+        cmd_pr_list = subparsers.add_parser(
+            'list',
+            help='PR lister parser')
         cmd_pr_list.add_argument(
             '--failed',
             action='store_true',
@@ -138,9 +146,11 @@ class AttentionList:
         cmd_zuul_subparsers = cmd_zuul.add_subparsers()
 
         self.add_zuul_list_subparser(cmd_zuul_subparsers)
-    
+
     def add_zuul_list_subparser(self, subparsers):
-        cmd_zuul_list = subparsers.add_parser('list', help='Zuul lister parser')
+        cmd_zuul_list = subparsers.add_parser(
+            'list',
+            help='Zuul lister parser')
         cmd_zuul_list.add_argument(
             '--error',
             action='store_true',
@@ -157,42 +167,44 @@ class AttentionList:
 
     def pr_lister(self):
         if not (
-            self.args.failed or
-            self.args.open or
-            self.args.timeout or
-            self.args.orphans or
-            self.args.older):
+                self.args.failed
+                or self.args.open
+                or self.args.timeout
+                or self.args.orphans
+                or self.args.older):
             raise Exception('PullRequest list parameter missing.')
-        lister = pr_lister.PrLister(config=self.config, args=self.args)
+        lister = pr_lister.PrLister(
+            config=self.config,
+            args=self.args)
         self.create_result(lister.list_failed_pr())
-    
+
     def metadata_lister(self):
         print('Metadata Lister')
-    
+
     def zuul_lister(self):
         print('Zuul Lister')
 
     def parse_arguments(self, args=None):
         self.parser = self.create_parser()
         self.args = self.parser.parse_args(args)
-    
+
     def read_config_file(self):
         try:
             with open(self.args.config) as f:
                 config = yaml.load(f, Loader=SafeLoader)
-        except Exception as e:
+        except Exception:
             print('ERROR while loading config file: ' + self.args.config)
         return config
-    
+
     def create_result(self, data):
         if data:
             if self.args.yaml:
                 result = yaml.dump(data)
             else:
-                result= json.dumps(data)
+                result = json.dumps(data)
         else:
-            raise("Result data missing")
-        
+            raise Exception("Result data missing")
+
         print(result)
 
     def main(self, args=None):
@@ -203,18 +215,12 @@ class AttentionList:
 
         self.config = AlConfig()
         self.config.config = self.read_config_file()
-
-        # Rework
-        # try:
         self.args.func()
-        # except Exception:
-            # self.parser.print_help()
-
-            
 
 
 def main():
     AttentionList().main()
+
 
 if __name__ == '__main__':
     main()

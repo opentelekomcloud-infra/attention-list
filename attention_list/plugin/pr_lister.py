@@ -15,9 +15,7 @@
 
 import requests
 import re
-import os
 
-from helper.utils import get_token
 from helper.utils import get_headers
 
 git_hoster = ['gitea', 'github']
