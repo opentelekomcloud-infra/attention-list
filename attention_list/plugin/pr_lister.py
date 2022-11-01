@@ -26,7 +26,6 @@ github_api_url = 'https://api.github.com/'
 
 class FailedPR:
     """Base class for failed Pull Requests"""
-
     def __init__(
         self,
         created_at,
@@ -53,6 +52,10 @@ class FailedPR:
 
 
 class PrLister:
+    """
+    Base class which has all methods to create a list of failed Pull Requests
+    from GitHub or Gitea repositories.
+    """
     def __init__(self, config, args):
         self.config = config.get_config()
         self.args = args
@@ -103,23 +106,6 @@ class PrLister:
                     " | " + str(res.reason))
                 break
         return repositories
-
-    # def create_request(self, method, url, headers):
-    #     try:
-    #         res = requests.request(method=method, url=req_url, headers=headers)
-    #     except Exception as e:
-    #         print("An error has occured: " + str(e))
-    #         print("The request status is: " + str(res.status_code) +
-    #             " | " + str(res.reason))
-    #         exit()
-    #     return res
-    
-    # def iterate_response_objects(self, res):
-    #     objects = []
-    #     if res.json():
-    #         for obj in res.json():
-    #             objects.append(obj)
-    #     return objects
 
     def get_gitea_prs(self, url, headers, gitea_org, repo):
         """
@@ -300,7 +286,7 @@ class PrLister:
 
     def create_result(self, failed_commits):
         """
-        Create Result
+        Create dictionary result list.
         """
         result = {}
         result['meta'] = {}
@@ -317,6 +303,10 @@ class PrLister:
         return result
 
     def list_failed_pr(self):
+        """
+        Method to run through every repository in each organization of one
+        or more Git providers.
+        """
         self.check_config()
         self.hoster = self.config['pr_list_failed']['git_hoster']
 

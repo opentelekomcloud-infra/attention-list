@@ -1,27 +1,56 @@
 @startuml Hello World
-class AttentionList {
-  config: dict
-  main()
-  create_parser()
-  parse_args()
-  create_result()
+
+package attention-list.plugin.attention_list {
+  class AttentionList {
+    config: dict
+    main()
+    create_parser()
+    parse_args()
+    create_result()
+    }
+  class AttentionListConfig{
+    config: dict
+  }
 }
 
-class AttentionListConfig{
-   config: dict
+package attention-list.plugin.pr_lister {
+  class PrLister  {
+  config: Object
+  args: dict
+  
+  init()
+  }
+
+  class FailedPR {
+    created_at: String
+    host: String
+    updated_at: String
+    url: String
+    error: String = None
+    org: String = None
+    pullrequest: String = None
+    repo: String = None
+    status: String = None
+    zuul_url: String = None
+    
+    init()
+    print_config()
+    check_config()
+    get_gitea_repos()
+    get_gitea_prs()
+    get_gitea_failed_commits()
+    add_builds_to_obj()
+    get_github_repos()
+    get_github_prs()
+    get_github_failed_commits()
+    create_result()
+    list_failed_pr()
+  }
 }
 
-class FailedPR{
-  created_at: String
-  host: String
-  updated_at: String
-  url: String
-  error: String = None
-  host: String = None
-  org: String = None
-  pullrequest: String = None
-  repo: String = None
-  status: String = None
-  zuul_url: String = None
-}
+AttentionList o- PrLister
+PrLister *- FailedPR
+PrLister - AttentionListConfig
+
+
 @enduml
