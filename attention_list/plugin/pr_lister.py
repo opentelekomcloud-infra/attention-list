@@ -98,7 +98,7 @@ class PrLister:
                 else:
                     break
             except Exception as e:
-                print("An error has occured: " + str(e))
+                print("Get Gitea Repos error: " + str(e))
                 print("The request status is: " + str(res.status_code) +
                     " | " + str(res.reason))
                 break
@@ -135,7 +135,7 @@ class PrLister:
                 for pr in res.json():
                     pullrequests.append(pr)
         except Exception as e:
-            print("An error has occured: " + str(e))
+            print("Get Gitea pullrequests error: " + str(e))
             print("The request status is: " + str(res.status_code) +
                 " | " + str(res.reason))
             exit()
@@ -148,12 +148,12 @@ class PrLister:
         """
         zuul_api_url = "https://zuul.otc-service.com/api/tenant/" + tenant + "/buildset/"
         final_url = re.sub('.*\/buildset\/', zuul_api_url, url)
-        zuul_headers = {}
-        zuul_headers['accept'] = 'application/json'
-        res_zuul = requests.request('GET', url=final_url, headers=zuul_headers)
+        headers = {}
+        headers['accept'] = 'application/json'
+        res_zuul = requests.request('GET', url=final_url, headers=headers)
         if res_zuul.status_code != 404 and res_zuul.json():
             x = res_zuul.json()
-            if len(x['builds']) != 0:
+            if ('builds' in x) and (len(x['builds']) != 0):
                 jobs = []
                 for build in x['builds']:
                     job = {}
@@ -185,12 +185,11 @@ class PrLister:
                 else:
                     break
             except Exception as e:
-                print("An error has occured: " + str(e))
+                print("Get Github repository error: " + str(e))
                 print("The request status is: " + str(res.status_code) +
                     " | " + str(res.reason))
                 break
         return repositories
-
 
     def get_gitea_failed_commits(self, pull, url, gitea_org, repo, headers):
         """
@@ -220,7 +219,7 @@ class PrLister:
                     failed_commits.append(o)
 
         except Exception as e:
-            print("An error has occured: " + str(e))
+            print("Get Gitea failed commits error: " + str(e))
             print("The request status is: " + str(res_sta.status_code) +
                 " | " + str(res_sta.reason))
         return failed_commits
@@ -245,7 +244,7 @@ class PrLister:
                 else:
                     break
             except Exception as e:
-                print("An error has occured: " + str(e))
+                print("Get GitHub pullrequests error: " + str(e))
                 print("The request status is: " + str(res.status_code) +
                     " | " + str(res.reason))
                 break
@@ -260,42 +259,43 @@ class PrLister:
             req_url = (url + 'repos/' + github_org + '/' + repo['name'] +
                     '/commits/' + pull['head']['sha'] + '/check-runs')
             res_sta = requests.request('GET', url=req_url, headers=headers)
-            if res_sta.json():
-                if len(res_sta.json()['check_runs']) != 0:
-                    if res_sta.json()['check_runs'][0]['conclusion'] == 'failure':
-                        zuul_url = res_sta.json()['check_runs'][0]['details_url']
-                        o = FailedPR(
-                            host='github',
-                            url=pull['html_url'],
-                            org=github_org,
-                            repo=repo['name'],
-                            pullrequest=pull['title'],
-                            status=res_sta.json()['check_runs'][0]['conclusion'],
-                            zuul_url=zuul_url,
-                            created_at=pull['created_at'],
-                            updated_at=(res_sta.json()['check_runs']
-                                        [0]['completed_at']),
-                            error=1000
-                        )
-                        o = add_builds_to_obj(obj=o, url=zuul_url, tenant='eco')
-                        failed_commits.append(o)
-                else:
+        except Exception as e:
+            print("Get GitHub failed commits error: " + str(e))
+            print("The request status is: " + str(res_sta.status_code) +
+                " | " + str(res_sta.reason))
+        
+        if res_sta.json():
+            if len(res_sta.json()['check_runs']) != 0:
+                if res_sta.json()['check_runs'][0]['conclusion'] == 'failure':
+                    zuul_url = res_sta.json()['check_runs'][0]['details_url']
                     o = FailedPR(
                         host='github',
                         url=pull['html_url'],
                         org=github_org,
                         repo=repo['name'],
                         pullrequest=pull['title'],
+                        status=res_sta.json()['check_runs'][0]['conclusion'],
+                        zuul_url=zuul_url,
                         created_at=pull['created_at'],
-                        updated_at=pull['updated_at'],
-                        error=1001,
+                        updated_at=(res_sta.json()['check_runs']
+                                    [0]['completed_at']),
+                        error=1000
                     )
+                    o = self.add_builds_to_obj(obj=o, url=zuul_url, tenant='eco')
                     failed_commits.append(o)
+            else:
+                o = FailedPR(
+                    host='github',
+                    url=pull['html_url'],
+                    org=github_org,
+                    repo=repo['name'],
+                    pullrequest=pull['title'],
+                    created_at=pull['created_at'],
+                    updated_at=pull['updated_at'],
+                    error=1001,
+                )
+                failed_commits.append(o)
 
-        except Exception as e:
-            print("An error has occured: " + str(e))
-            print("The request status is: " + str(res_sta.status_code) +
-                " | " + str(res_sta.reason))
         return failed_commits
 
     def create_result(self, failed_commits):
