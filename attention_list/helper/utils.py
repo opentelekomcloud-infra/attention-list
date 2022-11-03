@@ -15,6 +15,7 @@
 
 import os
 
+
 def get_token(hoster, args):
     token = ''
     if hoster == 'github':
@@ -38,6 +39,7 @@ def get_token(hoster, args):
     else:
         raise ValueError('No supported Git hoster provided.')
     return token
+
 
 def get_headers(hoster, args):
     headers = {}
