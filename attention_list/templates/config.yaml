@@ -11,8 +11,3 @@ pr_list_failed:
       orgs:
         - docs
       repos:
-zuul_list_errors:
-  url: 'https://zuul.otc-service.com/'
-  tenants:
-    - 'gl'
-    - 'eco'

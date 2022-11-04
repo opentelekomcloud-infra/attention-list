@@ -21,6 +21,7 @@ from yaml.loader import SafeLoader
 
 # after building package: plugin -> attention_list.plugin
 from plugin import pr_lister
+from plugin import zuul_lister
 
 
 class AlConfig():
@@ -151,8 +152,9 @@ class AttentionList:
         cmd_zuul_list = subparsers.add_parser(
             'list',
             help='Zuul lister parser')
+
         cmd_zuul_list.add_argument(
-            '--error',
+            '--errors',
             action='store_true',
             help='List Zuul errors.')
         cmd_zuul_list.add_argument(
@@ -182,18 +184,25 @@ class AttentionList:
         print('Metadata Lister')
 
     def zuul_lister(self):
-        print('Zuul Lister')
+        if self.args.errors or self.args.unknown_repos:
+            lister = zuul_lister.ZuulLister(
+                config = self.config,
+                args = self.args)
+            self.create_result(lister.list())
+        else:
+            raise Exception('Missing Zuul lister arguments')
 
     def parse_arguments(self, args=None):
         self.parser = self.create_parser()
         self.args = self.parser.parse_args(args)
 
     def read_config_file(self):
+        config = ''
         try:
             with open(self.args.config) as f:
                 config = yaml.load(f, Loader=SafeLoader)
         except Exception:
-            print('ERROR while loading config file: ' + self.args.config)
+            raise Exception('ERROR while loading config file from: ' + self.args.config)
         return config
 
     def create_result(self, data):

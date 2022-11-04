@@ -19,7 +19,6 @@ import re
 from helper.utils import get_headers
 
 git_hoster = ['gitea', 'github']
-github_api_url = 'https://api.github.com/'
 
 
 class FailedPR:
