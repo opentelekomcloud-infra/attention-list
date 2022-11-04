@@ -14,9 +14,6 @@
 # limitations under the License.
 
 import requests
-import re
-
-from helper.utils import get_headers
 
 
 class ZuulLister:
@@ -27,7 +24,7 @@ class ZuulLister:
     def __init__(self, config, args):
         self.config = config.get_config()
         self.args = args
-    
+
     def check_config(self):
         if self.args.errors:
             if self.args.unknown_repos:
@@ -36,11 +33,10 @@ class ZuulLister:
             if not self.config['zuul_list_errors']['url']:
                 raise Exception('Configuration error: url missing for '
                                 'zuul lister')
-    
+
     def prepare_url(self, tenant):
         url = self.config['zuul_list_errors']['url']
-        url = url + 'api/tenants/' + tenant + '/config-errors'
-        
+        url = url + 'api/tenant/' + tenant + '/config-errors'
         return url
 
     def list_errors(self):
@@ -51,10 +47,15 @@ class ZuulLister:
         for t in tenants:
             url = self.prepare_url(t)
             res = requests.request('GET', url=url, headers=headers)
-            print(res)
-            exit()
+            if res.json():
+                error_list = []
+                error_list = res.json()
+                for e in error_list:
+                    e['tenant'] = t
+                data.extend(error_list)
 
-    
+        return data
+
     def create_result(self, data):
         """
         Create dictionary result.
@@ -63,6 +64,7 @@ class ZuulLister:
         result['meta'] = {}
         result['data'] = []
         if data:
+            result['meta']['count'] = len(data)
             result['data'] = data
 
         return result

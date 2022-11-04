@@ -186,8 +186,8 @@ class AttentionList:
     def zuul_lister(self):
         if self.args.errors or self.args.unknown_repos:
             lister = zuul_lister.ZuulLister(
-                config = self.config,
-                args = self.args)
+                config=self.config,
+                args=self.args)
             self.create_result(lister.list())
         else:
             raise Exception('Missing Zuul lister arguments')
@@ -202,7 +202,9 @@ class AttentionList:
             with open(self.args.config) as f:
                 config = yaml.load(f, Loader=SafeLoader)
         except Exception:
-            raise Exception('ERROR while loading config file from: ' + self.args.config)
+            raise Exception(
+                'ERROR while loading config file from: '
+                + self.args.config)
         return config
 
     def create_result(self, data):
