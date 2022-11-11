@@ -20,6 +20,7 @@ import yaml
 from yaml.loader import SafeLoader
 
 # after building package: plugin -> attention_list.plugin
+from plugin import branch_lister
 from plugin import pr_lister
 from plugin import zuul_lister
 
@@ -58,6 +59,7 @@ class AttentionList:
 
         return parser
 
+    # Command Subparsers
     def createCommandParsers(self, parser):
         subparsers = parser.add_subparsers(title='commands')
 
@@ -68,6 +70,7 @@ class AttentionList:
 
         return subparsers
 
+    # Branch Subparsers
     def add_branch_subparser(self, subparsers):
         cmd_branch = subparsers.add_parser('branch', help='Branch parser')
         cmd_branch_subparsers = cmd_branch.add_subparsers()
@@ -82,7 +85,26 @@ class AttentionList:
             '--empty',
             action='store_true',
             help='List empty branches')
+        cmd_branch_list.add_argument(
+            '--github-token',
+            help='Provide GitHub token via CLI')
+        cmd_branch_list.add_argument(
+            '--gitea-token',
+            help='Provide Gitea token via CLI')
 
+        cmd_branch_list.set_defaults(func=self.branch_lister)
+
+    def branch_lister(self):
+        if self.args.empty:
+            lister = branch_lister.BranchLister(
+                config=self.config,
+                args=self.args)
+            self.create_result(lister.list_empty())
+        else:
+            raise Exception(
+                'Branch lister has no proper command line option.')
+
+    # Metadata Subparsers
     def add_metadata_subparser(self, subparsers):
         cmd_metadata = subparsers.add_parser(
             'metadata',
@@ -102,6 +124,10 @@ class AttentionList:
 
         cmd_metadata_list.set_defaults(func=self.metadata_lister)
 
+    def metadata_lister(self):
+        print('Metadata Lister')
+
+    # PR Subparsers
     def add_pr_subparser(self, subparsers):
         cmd_pr = subparsers.add_parser('pr', help='PR parser')
         cmd_pr_subparsers = cmd_pr.add_subparsers()
@@ -142,6 +168,20 @@ class AttentionList:
 
         cmd_pr_list.set_defaults(func=self.pr_lister)
 
+    def pr_lister(self):
+        if not (
+                self.args.failed
+                or self.args.open
+                or self.args.timeout
+                or self.args.orphans
+                or self.args.older):
+            raise Exception('PullRequest list parameter missing.')
+        lister = pr_lister.PrLister(
+            config=self.config,
+            args=self.args)
+        self.create_result(lister.list_failed_pr())
+
+    # Zuul Subparsers
     def add_zuul_subparser(self, subparsers):
         cmd_zuul = subparsers.add_parser('zuul', help='Zuul parser')
         cmd_zuul_subparsers = cmd_zuul.add_subparsers()
@@ -163,25 +203,6 @@ class AttentionList:
             help='List unknown repositories for Zuul.')
 
         cmd_zuul_list.set_defaults(func=self.zuul_lister)
-
-    def branch_lister(self):
-        print('Branch Lister')
-
-    def pr_lister(self):
-        if not (
-                self.args.failed
-                or self.args.open
-                or self.args.timeout
-                or self.args.orphans
-                or self.args.older):
-            raise Exception('PullRequest list parameter missing.')
-        lister = pr_lister.PrLister(
-            config=self.config,
-            args=self.args)
-        self.create_result(lister.list_failed_pr())
-
-    def metadata_lister(self):
-        print('Metadata Lister')
 
     def zuul_lister(self):
         if self.args.errors or self.args.unknown_repos:

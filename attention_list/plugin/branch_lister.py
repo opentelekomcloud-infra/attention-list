@@ -22,36 +22,25 @@ from helper.utils import create_result
 git_hoster = ['gitea', 'github']
 
 
-class FailedPR:
-    """Base class for failed Pull Requests"""
+class EmptyBranch:
+    """Branch without any open Pull Request"""
     def __init__(
             self,
-            created_at,
-            host,
-            updated_at,
-            url,
-            error=None,
-            pullrequest=None,
             org=None,
             repo=None,
-            status=None,
-            zuul_url=None):
+            hoster=None,
+            name=None):
 
-        self.created_at = created_at
-        self.error = error
-        self.host = host
         self.org = org
-        self.pullrequest = pullrequest
         self.repo = repo
-        self.status = status
-        self.updated_at = updated_at
-        self.url = url
-        self.zuul_url = zuul_url
+        self.hoster = hoster
+        self.name = name
 
 
-class PrLister:
+class BranchLister:
     """
-    Base class which has all methods to create a list of failed Pull Requests
+    Base class which has all methods to create a list Branches with to be
+    defined
     from GitHub or Gitea repositories.
     """
     def __init__(self, config, args):
@@ -62,9 +51,9 @@ class PrLister:
         print(self.config)
 
     def check_config(self):
-        if not self.config['pr_list_failed']['git_hoster']:
+        if not self.config['branch_list_empty']['git_hoster']:
             raise Exception('Config missing git_hoster entry.')
-        hoster = self.config['pr_list_failed']['git_hoster']
+        hoster = self.config['branch_list_empty']['git_hoster']
         for h in hoster:
             if h['name'] not in git_hoster:
                 raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
@@ -95,7 +84,7 @@ class PrLister:
                 i += 1
                 if res.json():
                     for repo in res.json():
-                        repositories.append(repo)
+                        repositories.append(repo['name'])
                     continue
                 else:
                     break
@@ -108,6 +97,36 @@ class PrLister:
                     + str(res.reason))
                 break
         return repositories
+
+    def get_gitea_branches(self, url, headers, gitea_org, repo):
+        """
+        Collect all branches of a Gitea Repository
+        """
+        branches = []
+
+        try:
+            req_url = (
+                url
+                + 'repos/'
+                + gitea_org
+                + '/'
+                + repo
+                + '/branches')
+            res = requests.request('GET', url=req_url, headers=headers)
+            if res.json():
+                branches_raw = res.json()
+                for branch in branches_raw:
+                    if branch['name'] and (branch['name'] != 'main'):
+                        branches.append(branch['name'])
+        except Exception as e:
+            print("get_gitea_branches error: " + str(e))
+            print(
+                "The request status is: "
+                + str(res.status_code)
+                + " | "
+                + str(res.reason))
+            exit()
+        return branches
 
     def get_gitea_prs(self, url, headers, gitea_org, repo):
         """
@@ -128,7 +147,7 @@ class PrLister:
                 for pr in res.json():
                     pullrequests.append(pr)
         except Exception as e:
-            print("Get Gitea pullrequests error: " + str(e))
+            print("get_gitea_branches error: " + str(e))
             print(
                 "The request status is: "
                 + str(res.status_code)
@@ -191,52 +210,6 @@ class PrLister:
                 break
         return repositories
 
-    def get_gitea_failed_commits(self, pull, url, gitea_org, repo, headers):
-        """
-        Collect all failed gitea commits of one repository.
-        """
-        failed_commits = []
-        try:
-            req_url = (
-                url
-                + 'repos/'
-                + gitea_org
-                + '/'
-                + repo['name']
-                + '/commits/'
-                + pull['head']['ref']
-                + '/statuses?limit=1')
-            res_sta = requests.request('GET', url=req_url, headers=headers)
-            if res_sta.json():
-                if res_sta.json()[0]['status'] == 'failure':
-                    zuul_url = res_sta.json()[0]['target_url']
-                    o = FailedPR(
-                        host='gitea',
-                        url=pull['url'],
-                        org=gitea_org,
-                        repo=repo['name'],
-                        pullrequest=pull['title'],
-                        status=res_sta.json()[0]['status'],
-                        zuul_url=zuul_url,
-                        created_at=pull['created_at'],
-                        updated_at=res_sta.json()[0]['updated_at'],
-                        error=1000
-                    )
-                    o = self.add_builds_to_obj(
-                        obj=o,
-                        url=zuul_url,
-                        tenant='gl')
-                    failed_commits.append(o)
-
-        except Exception as e:
-            print("Get Gitea failed commits error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res_sta.status_code)
-                + " | "
-                + str(res_sta.reason))
-        return failed_commits
-
     def get_github_prs(self, url, headers, github_org, repo):
         """
         Get all Pull Requests of one GitHub repository
@@ -272,76 +245,53 @@ class PrLister:
                 break
         return pullrequests
 
-    def get_github_failed_commits(self, pull, url, github_org, repo, headers):
-        """
-        Collect all Failed Pull Requests of one GitHub repository
-        """
-        failed_commits = []
-        try:
-            req_url = (
-                url
-                + 'repos/'
-                + github_org
-                + '/'
-                + repo['name']
-                + '/commits/'
-                + pull['head']['sha']
-                + '/check-runs')
-            res_sta = requests.request('GET', url=req_url, headers=headers)
-        except Exception as e:
-            print("Get GitHub failed commits error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res_sta.status_code)
-                + " | "
-                + str(res_sta.reason))
+    def get_gitea_branches_with_pr(self, org, pulls):
+        branches = []
+        for pr in pulls:
+            branch_base = pr['base']['repo']['full_name']
+            branch_head = pr['head']['repo']['full_name']
+            if branch_base == branch_head:
+                branches.append(pr['head']['ref'])
+        return branches
 
-        if res_sta.json():
-            if len(res_sta.json()['check_runs']) != 0:
-                if res_sta.json()['check_runs'][0]['conclusion'] == 'failure':
-                    zuul_url = res_sta.json()['check_runs'][0]['details_url']
-                    o = FailedPR(
-                        host='github',
-                        url=pull['html_url'],
-                        org=github_org,
-                        repo=repo['name'],
-                        pullrequest=pull['title'],
-                        status=res_sta.json()['check_runs'][0]['conclusion'],
-                        zuul_url=zuul_url,
-                        created_at=pull['created_at'],
-                        updated_at=(res_sta.json()['check_runs']
-                                    [0]['completed_at']),
-                        error=1000
-                    )
-                    o = self.add_builds_to_obj(
-                        obj=o,
-                        url=zuul_url,
-                        tenant='eco')
-                    failed_commits.append(o)
-            else:
-                o = FailedPR(
-                    host='github',
-                    url=pull['html_url'],
-                    org=github_org,
-                    repo=repo['name'],
-                    pullrequest=pull['title'],
-                    created_at=pull['created_at'],
-                    updated_at=pull['updated_at'],
-                    error=1001,
-                )
-                failed_commits.append(o)
+    def get_empty_branches(self, hoster, org, repo, pulls, branches):
+        empty_branches = branches
+        full_branches = self.get_gitea_branches_with_pr(
+            org=org,
+            pulls=pulls)
+        for b in full_branches:
+            empty_branches.remove(b)
+        result = self.create_obj_branches(
+            hoster=hoster,
+            org=org,
+            repo=repo,
+            branches=empty_branches
+        )
 
-        return failed_commits
+        return result
 
-    def list_failed_pr(self):
+    def create_obj_branches(self, hoster, org, repo, branches):
+        result = []
+        for b in branches:
+            item = EmptyBranch(
+                hoster=hoster,
+                org=org,
+                repo=repo,
+                name=b
+            )
+            result.append(item)
+        return result
+
+    def list_empty(self):
         """
         Method to run through every repository in each organization of one
-        or more Git providers.
+        or more Git providers to collect all Branches having no open
+        Pull Requests left and could be closed.
         """
         self.check_config()
-        self.hoster = self.config['pr_list_failed']['git_hoster']
+        self.hoster = self.config['branch_list_empty']['git_hoster']
 
-        failed_commits = []
+        empty_branches = []
         for h in self.hoster:
             if h['name'] == 'gitea':
                 headers = get_headers(
@@ -355,50 +305,63 @@ class PrLister:
                         gitea_org=org
                     )
                     for repo in repos:
+                        branches = self.get_gitea_branches(
+                            url=h['api_url'],
+                            headers=headers,
+                            gitea_org=org,
+                            repo=repo
+                        )
                         pulls = self.get_gitea_prs(
                             url=h['api_url'],
                             headers=headers,
                             gitea_org=org,
-                            repo=repo['name']
+                            repo=repo
                         )
-                        if pulls:
-                            for pull in pulls:
-                                commits = self.get_gitea_failed_commits(
-                                    pull=pull,
-                                    url=h['api_url'],
-                                    gitea_org=org,
-                                    repo=repo,
-                                    headers=headers
-                                )
-                                failed_commits.extend(commits)
+                        if branches:
+                            result_branches = self.get_empty_branches(
+                                hoster=h['name'],
+                                org=org,
+                                repo=repo,
+                                pulls=pulls,
+                                branches=branches)
+                            empty_branches.extend(result_branches)
 
-            elif h['name'] == 'github':
-                headers = get_headers(
-                    hoster=h['name'],
-                    args=self.args
-                )
-                for org in h['orgs']:
-                    repos = self.get_github_repos(
-                        url=h['api_url'],
-                        headers=headers,
-                        github_org=org
-                    )
-                    for repo in repos:
-                        pulls = self.get_github_prs(
-                            url=h['api_url'],
-                            headers=headers,
-                            github_org=org,
-                            repo=repo['name']
-                        )
-                        if pulls:
-                            for pull in pulls:
-                                commits = self.get_github_failed_commits(
-                                    pull=pull,
-                                    url=h['api_url'],
-                                    github_org=org,
-                                    repo=repo,
-                                    headers=headers
-                                )
-                                failed_commits.extend(commits)
+                        #         commits = self.get_gitea_failed_commits(
+                        #             pull=pull,
+                        #             url=h['api_url'],
+                        #             gitea_org=org,
+                        #             repo=repo,
+                        #             headers=headers
+                        #         )
+                        #         failed_commits.extend(commits)
 
-        return create_result(failed_commits)
+            # elif h['name'] == 'github':
+            #     headers = get_headers(
+            #         hoster=h['name'],
+            #         args=self.args
+            #     )
+            #     for org in h['orgs']:
+            #         repos = self.get_github_repos(
+            #             url=h['api_url'],
+            #             headers=headers,
+            #             github_org=org
+            #         )
+            #         for repo in repos:
+            #             pulls = self.get_github_prs(
+            #                 url=h['api_url'],
+            #                 headers=headers,
+            #                 github_org=org,
+            #                 repo=repo['name']
+            #             )
+            #             if pulls:
+            #                 for pull in pulls:
+            #                     commits = self.get_github_failed_commits(
+            #                         pull=pull,
+            #                         url=h['api_url'],
+            #                         github_org=org,
+            #                         repo=repo,
+            #                         headers=headers
+            #                     )
+            #                     failed_commits.extend(commits)
+
+        return create_result(empty_branches)

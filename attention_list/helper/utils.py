@@ -16,6 +16,25 @@
 import os
 
 
+def create_result(items):
+    """
+    Create dictionary result list.
+    """
+    result = {}
+    result['meta'] = {}
+    result['data'] = []
+    if len(items) != 0:
+        items_json = []
+        for obj in items:
+            items_json.append(vars(obj))
+        result['meta']['count'] = len(items_json)
+        result['data'] = items_json
+    else:
+        result['meta']['count'] = 0
+
+    return result
+
+
 def get_token(hoster, args):
     token = ''
     if hoster == 'github':
