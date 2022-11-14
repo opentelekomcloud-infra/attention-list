@@ -19,10 +19,9 @@ import json
 import yaml
 from yaml.loader import SafeLoader
 
-# after building package: plugin -> attention_list.plugin
-from plugin import branch_lister
-from plugin import pr_lister
-from plugin import zuul_lister
+from attention_list.plugin import branch_lister
+from attention_list.plugin import pr_lister
+from attention_list.plugin import zuul_lister
 
 
 class AlConfig():

@@ -16,8 +16,8 @@
 import requests
 import re
 
-from helper.utils import get_headers
-from helper.utils import create_result
+from attention_list.helper.utils import get_headers
+from attention_list.helper.utils import create_result
 
 git_hoster = ['gitea', 'github']
 
