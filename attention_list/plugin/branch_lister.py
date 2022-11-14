@@ -251,6 +251,8 @@ class BranchLister:
 
     def list_empty(self):
         """
+        command: branch list empty
+
         Method to run through every repository in each organization of one
         or more Git providers to collect all Branches having no open
         Pull Requests left and could be closed.

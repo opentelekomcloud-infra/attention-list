@@ -335,6 +335,8 @@ class PrLister:
 
     def list_failed_pr(self):
         """
+        command: pr list failed
+
         Method to run through every repository in each organization of one
         or more Git providers.
         """

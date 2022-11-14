@@ -40,6 +40,9 @@ class ZuulLister:
         return url
 
     def list_errors(self):
+        """
+        command: zuul list errors
+        """
         data = []
         headers = {}
         headers['accept'] = 'application/json'
