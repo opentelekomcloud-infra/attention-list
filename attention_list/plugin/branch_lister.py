@@ -71,7 +71,6 @@ class BranchLister:
         """
         repositories = []
         i = 1
-
         while True:
             try:
                 req_url = (
@@ -156,31 +155,6 @@ class BranchLister:
             exit()
         return pullrequests
 
-    def add_builds_to_obj(self, obj, url, tenant):
-        """
-        This method trys to find all build jobs under a Zuul buildset.
-        The corresponding data like log_url and status will be added.
-        """
-        zuul_api_url = "https://zuul.otc-service.com/api/tenant/"
-        zuul_api_url = zuul_api_url + tenant + "/buildset/"
-        final_url = re.sub(r'.*\/buildset\/', zuul_api_url, url)
-        headers = {}
-        headers['accept'] = 'application/json'
-        res_zuul = requests.request('GET', url=final_url, headers=headers)
-        if res_zuul.status_code != 404 and res_zuul.json():
-            x = res_zuul.json()
-            if ('builds' in x) and (len(x['builds']) != 0):
-                jobs = []
-                for build in x['builds']:
-                    job = {}
-                    job['uuid'] = build['uuid']
-                    job['name'] = build['job_name']
-                    job['result'] = build['result']
-                    job['log_url'] = build['log_url']
-                    jobs.append(job)
-                obj.jobs = jobs
-        return obj
-
     def get_github_repos(self, url, headers, github_org):
         """
         Get all repositories of one GitHub organization
@@ -194,6 +168,8 @@ class BranchLister:
                 res = requests.request('GET', url=req_url, headers=headers)
                 if res.json():
                     for repo in res.json():
+                        print(repo)
+                        exit()
                         if repo['archived'] is False:
                             repositories.append(repo)
                     i += 1
@@ -245,7 +221,7 @@ class BranchLister:
                 break
         return pullrequests
 
-    def get_gitea_branches_with_pr(self, org, pulls):
+    def get_gitea_branches_with_pr(self, pulls):
         branches = []
         for pr in pulls:
             branch_base = pr['base']['repo']['full_name']
@@ -257,7 +233,6 @@ class BranchLister:
     def get_empty_branches(self, hoster, org, repo, pulls, branches):
         empty_branches = branches
         full_branches = self.get_gitea_branches_with_pr(
-            org=org,
             pulls=pulls)
         for b in full_branches:
             empty_branches.remove(b)
@@ -299,11 +274,15 @@ class BranchLister:
                     args=self.args
                 )
                 for org in h['orgs']:
-                    repos = self.get_gitea_repos(
-                        url=h['api_url'],
-                        headers=headers,
-                        gitea_org=org
-                    )
+                    repos = []
+                    if h['repos']:
+                        repos = h['repos']
+                    else:
+                        repos = self.get_gitea_repos(
+                            url=h['api_url'],
+                            headers=headers,
+                            gitea_org=org
+                        )
                     for repo in repos:
                         branches = self.get_gitea_branches(
                             url=h['api_url'],
@@ -325,15 +304,6 @@ class BranchLister:
                                 pulls=pulls,
                                 branches=branches)
                             empty_branches.extend(result_branches)
-
-                        #         commits = self.get_gitea_failed_commits(
-                        #             pull=pull,
-                        #             url=h['api_url'],
-                        #             gitea_org=org,
-                        #             repo=repo,
-                        #             headers=headers
-                        #         )
-                        #         failed_commits.extend(commits)
 
             # elif h['name'] == 'github':
             #     headers = get_headers(

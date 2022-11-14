@@ -28,3 +28,4 @@ branch_list_empty:
       orgs:
         - docs
       repos:
+       - vpc-endpoint
