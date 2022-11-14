@@ -97,34 +97,55 @@ class BranchLister:
                 break
         return repositories
 
-    def get_gitea_branches(self, url, headers, gitea_org, repo):
+    def get_branches(self, hoster, url, headers, org, repo):
         """
         Collect all branches of a Gitea Repository
         """
         branches = []
+        res = {}
 
-        try:
-            req_url = (
-                url
-                + 'repos/'
-                + gitea_org
-                + '/'
-                + repo
-                + '/branches')
-            res = requests.request('GET', url=req_url, headers=headers)
-            if res.json():
-                branches_raw = res.json()
-                for branch in branches_raw:
-                    if branch['name'] and (branch['name'] != 'main'):
-                        branches.append(branch['name'])
-        except Exception as e:
-            print("get_gitea_branches error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res.status_code)
-                + " | "
-                + str(res.reason))
-            exit()
+        if hoster == 'gitea':
+            try:
+                req_url = (
+                    url
+                    + 'repos/'
+                    + org
+                    + '/'
+                    + repo
+                    + '/branches')
+                res = requests.request('GET', url=req_url, headers=headers)
+            except Exception as e:
+                print("get_branches error: " + str(e))
+                print(
+                    "The request status is: "
+                    + str(res.status_code)
+                    + " | "
+                    + str(res.reason))
+                exit()
+        elif hoster == 'github':
+            try:
+                req_url = (
+                    url
+                    + 'repos/'
+                    + org
+                    + '/'
+                    + repo
+                    + '/branches')
+                res = requests.request('GET', url=req_url, headers=headers)
+            except Exception as e:
+                print("get_branches error: " + str(e))
+                print(
+                    "The request status is: "
+                    + str(res.status_code)
+                    + " | "
+                    + str(res.reason))
+                exit()
+
+        if res.json():
+            branches_raw = res.json()
+            for branch in branches_raw:
+                if branch['name'] and (branch['name'] != 'main') and (branch['name'] != 'master'):
+                    branches.append(branch['name'])
         return branches
 
     def get_gitea_prs(self, url, headers, gitea_org, repo):
@@ -168,10 +189,8 @@ class BranchLister:
                 res = requests.request('GET', url=req_url, headers=headers)
                 if res.json():
                     for repo in res.json():
-                        print(repo)
-                        exit()
                         if repo['archived'] is False:
-                            repositories.append(repo)
+                            repositories.append(repo['name'])
                     i += 1
                     continue
                 else:
@@ -186,7 +205,7 @@ class BranchLister:
                 break
         return repositories
 
-    def get_github_prs(self, url, headers, github_org, repo):
+    def get_github_prs(self, url, headers, org, repo):
         """
         Get all Pull Requests of one GitHub repository
         """
@@ -198,7 +217,7 @@ class BranchLister:
                 req_url = (
                     url
                     + 'repos/'
-                    + github_org
+                    + org
                     + '/'
                     + repo
                     + '/pulls?state=open&page='
@@ -221,18 +240,23 @@ class BranchLister:
                 break
         return pullrequests
 
-    def get_gitea_branches_with_pr(self, pulls):
+    def get_branches_with_pr(self, hoster, pulls):
         branches = []
-        for pr in pulls:
-            branch_base = pr['base']['repo']['full_name']
-            branch_head = pr['head']['repo']['full_name']
-            if branch_base == branch_head:
-                branches.append(pr['head']['ref'])
+        if hoster == 'gitea':
+            for pr in pulls:
+                branch_base = pr['base']['repo']['full_name']
+                branch_head = pr['head']['repo']['full_name']
+                if branch_base == branch_head:
+                    branches.append(pr['head']['ref'])
+        elif hoster == 'github':
+            pass
         return branches
 
     def get_empty_branches(self, hoster, org, repo, pulls, branches):
         empty_branches = branches
-        full_branches = self.get_gitea_branches_with_pr(
+        full_branches = []
+        full_branches = self.get_branches_with_pr(
+            hoster=hoster,
             pulls=pulls)
         for b in full_branches:
             empty_branches.remove(b)
@@ -284,10 +308,11 @@ class BranchLister:
                             gitea_org=org
                         )
                     for repo in repos:
-                        branches = self.get_gitea_branches(
+                        branches = self.get_branches(
+                            hoster=h['name'],
                             url=h['api_url'],
                             headers=headers,
-                            gitea_org=org,
+                            org=org,
                             repo=repo
                         )
                         pulls = self.get_gitea_prs(
@@ -305,33 +330,38 @@ class BranchLister:
                                 branches=branches)
                             empty_branches.extend(result_branches)
 
-            # elif h['name'] == 'github':
-            #     headers = get_headers(
-            #         hoster=h['name'],
-            #         args=self.args
-            #     )
-            #     for org in h['orgs']:
-            #         repos = self.get_github_repos(
-            #             url=h['api_url'],
-            #             headers=headers,
-            #             github_org=org
-            #         )
-            #         for repo in repos:
-            #             pulls = self.get_github_prs(
-            #                 url=h['api_url'],
-            #                 headers=headers,
-            #                 github_org=org,
-            #                 repo=repo['name']
-            #             )
-            #             if pulls:
-            #                 for pull in pulls:
-            #                     commits = self.get_github_failed_commits(
-            #                         pull=pull,
-            #                         url=h['api_url'],
-            #                         github_org=org,
-            #                         repo=repo,
-            #                         headers=headers
-            #                     )
-            #                     failed_commits.extend(commits)
+            elif h['name'] == 'github':
+                headers = get_headers(
+                    hoster=h['name'],
+                    args=self.args
+                )
+                for org in h['orgs']:
+                    repos = self.get_github_repos(
+                        url=h['api_url'],
+                        headers=headers,
+                        github_org=org
+                    )
+                    for repo in repos:
+                        branches = self.get_branches(
+                            hoster=h['name'],
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org,
+                            repo=repo
+                        )
+                        pulls = self.get_github_prs(
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org,
+                            repo=repo
+                        )
+                        if branches:
+                            result_branches = self.get_empty_branches(
+                                hoster=h['name'],
+                                org=org,
+                                repo=repo,
+                                pulls=pulls,
+                                branches=branches)
+                            empty_branches.extend(result_branches)
 
         return create_result(empty_branches)

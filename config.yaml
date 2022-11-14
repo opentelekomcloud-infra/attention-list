@@ -18,14 +18,13 @@ zuul_list_errors:
     - 'eco'
 branch_list_empty:
   git_hoster:
-    # - name: 'github'
-    #   api_url: 'https://api.github.com/'
-    #   orgs:
-    #     - 'opentelekomcloud-docs'
-    #   repos:
+    - name: 'github'
+      api_url: 'https://api.github.com/'
+      orgs:
+        - 'opentelekomcloud-docs'
+      repos:
     - name: 'gitea'
       api_url: 'https://gitea.eco.tsi-dev.otc-service.com/api/v1/'
       orgs:
         - docs
       repos:
-       - vpc-endpoint
