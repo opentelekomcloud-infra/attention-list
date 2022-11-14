@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import requests
-import re
 
 from helper.utils import get_headers
 from helper.utils import create_result
@@ -65,199 +64,169 @@ class BranchLister:
                                 'or not type of list for git_hoster: '
                                 + h['name'])
 
-    def get_gitea_repos(self, url, headers, gitea_org):
+    def get_repos(self, hoster, url, headers, org):
         """
-        Get all Repositories of one Gitea orgainzation
+        Get all Repositories of a Git organization
         """
         repositories = []
-        i = 1
-        while True:
-            try:
-                req_url = (
-                    url
-                    + 'orgs/'
-                    + gitea_org
-                    + '/repos?limit=50&page='
-                    + str(i))
-                res = requests.request('GET', url=req_url, headers=headers)
-                i += 1
-                if res.json():
-                    for repo in res.json():
-                        repositories.append(repo['name'])
-                    continue
-                else:
-                    break
-            except Exception as e:
-                print("Get Gitea Repos error: " + str(e))
-                print(
-                    "The request status is: "
-                    + str(res.status_code)
-                    + " | "
-                    + str(res.reason))
-                break
-        return repositories
-
-    def get_branches(self, hoster, url, headers, org, repo):
-        """
-        Collect all branches of a Gitea Repository
-        """
-        branches = []
-        res = {}
 
         if hoster == 'gitea':
-            try:
-                req_url = (
-                    url
-                    + 'repos/'
-                    + org
-                    + '/'
-                    + repo
-                    + '/branches')
-                res = requests.request('GET', url=req_url, headers=headers)
-            except Exception as e:
-                print("get_branches error: " + str(e))
-                print(
-                    "The request status is: "
-                    + str(res.status_code)
-                    + " | "
-                    + str(res.reason))
-                exit()
+            i = 1
+            while True:
+                try:
+                    req_url = (
+                        url
+                        + 'orgs/'
+                        + org
+                        + '/repos?limit=50&page='
+                        + str(i))
+                    res = requests.request('GET', url=req_url, headers=headers)
+                    i += 1
+                    if res.json():
+                        for repo in res.json():
+                            repositories.append(repo['name'])
+                        continue
+                    else:
+                        break
+                except Exception as e:
+                    print("Get Gitea Repos error: " + str(e))
+                    print(
+                        "The request status is: "
+                        + str(res.status_code)
+                        + " | "
+                        + str(res.reason))
+                    break
         elif hoster == 'github':
-            try:
-                req_url = (
-                    url
-                    + 'repos/'
-                    + org
-                    + '/'
-                    + repo
-                    + '/branches')
-                res = requests.request('GET', url=req_url, headers=headers)
-            except Exception as e:
-                print("get_branches error: " + str(e))
-                print(
-                    "The request status is: "
-                    + str(res.status_code)
-                    + " | "
-                    + str(res.reason))
-                exit()
+            i = 1
+            while True:
+                try:
+                    req_url = (
+                        url
+                        + 'orgs/'
+                        + org
+                        + '/repos?page='
+                        + str(i))
+                    res = requests.request('GET', url=req_url, headers=headers)
+                    if res.json():
+                        for repo in res.json():
+                            if repo['archived'] is False:
+                                repositories.append(repo['name'])
+                        i += 1
+                        continue
+                    else:
+                        break
+                except Exception as e:
+                    print("Get Github repository error: " + str(e))
+                    print(
+                        "The request status is: "
+                        + str(res.status_code)
+                        + " | "
+                        + str(res.reason))
+                    break
+        return repositories
 
-        if res.json():
-            branches_raw = res.json()
-            for branch in branches_raw:
-                if branch['name'] and (branch['name'] != 'main') and (branch['name'] != 'master'):
-                    branches.append(branch['name'])
-        return branches
-
-    def get_gitea_prs(self, url, headers, gitea_org, repo):
+    def get_branches(self, url, headers, org, repo):
         """
-        Collect all Pull Requests of a Gitea Repository
+        Collect all branches of a Git Repository
         """
-        pullrequests = []
-
+        branches = []
         try:
             req_url = (
                 url
                 + 'repos/'
-                + gitea_org
+                + org
                 + '/'
                 + repo
-                + '/pulls?state=open')
+                + '/branches')
             res = requests.request('GET', url=req_url, headers=headers)
-            if res.json():
-                for pr in res.json():
-                    pullrequests.append(pr)
         except Exception as e:
-            print("get_gitea_branches error: " + str(e))
+            print("get_branches error: " + str(e))
             print(
                 "The request status is: "
                 + str(res.status_code)
                 + " | "
                 + str(res.reason))
             exit()
-        return pullrequests
 
-    def get_github_repos(self, url, headers, github_org):
-        """
-        Get all repositories of one GitHub organization
-        """
-        repositories = []
-        i = 1
+        if res.json():
+            branches_raw = res.json()
+            for branch in branches_raw:
+                if branch['name']:
+                    if branch['name'] != 'main' and \
+                            branch['name'] != 'master':
+                        branches.append(branch['name'])
+        return branches
 
-        while True:
-            try:
-                req_url = url + 'orgs/' + github_org + '/repos?page=' + str(i)
-                res = requests.request('GET', url=req_url, headers=headers)
-                if res.json():
-                    for repo in res.json():
-                        if repo['archived'] is False:
-                            repositories.append(repo['name'])
-                    i += 1
-                    continue
-                else:
-                    break
-            except Exception as e:
-                print("Get Github repository error: " + str(e))
-                print(
-                    "The request status is: "
-                    + str(res.status_code)
-                    + " | "
-                    + str(res.reason))
-                break
-        return repositories
-
-    def get_github_prs(self, url, headers, org, repo):
+    def get_pull_requests(self, hoster, url, headers, org, repo):
         """
-        Get all Pull Requests of one GitHub repository
+        Collect all open Pull Requests of a Git Repository
         """
         pullrequests = []
-        i = 1
 
-        while True:
+        if hoster == 'gitea':
+            req_url = (
+                url
+                + 'repos/'
+                + org
+                + '/'
+                + repo
+                + '/pulls?state=open')
             try:
-                req_url = (
-                    url
-                    + 'repos/'
-                    + org
-                    + '/'
-                    + repo
-                    + '/pulls?state=open&page='
-                    + str(i))
                 res = requests.request('GET', url=req_url, headers=headers)
                 if res.json():
                     for pr in res.json():
                         pullrequests.append(pr)
-                    i += 1
-                    continue
-                else:
-                    break
             except Exception as e:
-                print("Get GitHub pullrequests error: " + str(e))
+                print("get_pull_requests error: " + str(e))
                 print(
                     "The request status is: "
                     + str(res.status_code)
                     + " | "
                     + str(res.reason))
-                break
+                exit()
+        elif hoster == 'github':
+            i = 1
+            while True:
+                try:
+                    req_url = (
+                        url
+                        + 'repos/'
+                        + org
+                        + '/'
+                        + repo
+                        + '/pulls?state=open&page='
+                        + str(i))
+                    res = requests.request('GET', url=req_url, headers=headers)
+                    if res.json():
+                        for pr in res.json():
+                            pullrequests.append(pr)
+                        i += 1
+                        continue
+                    else:
+                        break
+                except Exception as e:
+                    print("Get GitHub pullrequests error: " + str(e))
+                    print(
+                        "The request status is: "
+                        + str(res.status_code)
+                        + " | "
+                        + str(res.reason))
+                    exit()
         return pullrequests
 
-    def get_branches_with_pr(self, hoster, pulls):
+    def get_branches_with_pr(self, pulls):
         branches = []
-        if hoster == 'gitea':
-            for pr in pulls:
-                branch_base = pr['base']['repo']['full_name']
-                branch_head = pr['head']['repo']['full_name']
-                if branch_base == branch_head:
-                    branches.append(pr['head']['ref'])
-        elif hoster == 'github':
-            pass
+        for pr in pulls:
+            branch_base = pr['base']['repo']['full_name']
+            branch_head = pr['head']['repo']['full_name']
+            if branch_base == branch_head:
+                branches.append(pr['head']['ref'])
         return branches
 
     def get_empty_branches(self, hoster, org, repo, pulls, branches):
         empty_branches = branches
         full_branches = []
-        full_branches = self.get_branches_with_pr(
-            hoster=hoster,
-            pulls=pulls)
+        full_branches = self.get_branches_with_pr(pulls=pulls)
         for b in full_branches:
             empty_branches.remove(b)
         result = self.create_obj_branches(
@@ -266,7 +235,6 @@ class BranchLister:
             repo=repo,
             branches=empty_branches
         )
-
         return result
 
     def create_obj_branches(self, hoster, org, repo, branches):
@@ -292,7 +260,7 @@ class BranchLister:
 
         empty_branches = []
         for h in self.hoster:
-            if h['name'] == 'gitea':
+            if h['name'] == 'gitea' or h['name'] == 'github':
                 headers = get_headers(
                     hoster=h['name'],
                     args=self.args
@@ -302,54 +270,21 @@ class BranchLister:
                     if h['repos']:
                         repos = h['repos']
                     else:
-                        repos = self.get_gitea_repos(
+                        repos = self.get_repos(
+                            hoster=h['name'],
                             url=h['api_url'],
                             headers=headers,
-                            gitea_org=org
+                            org=org
                         )
                     for repo in repos:
                         branches = self.get_branches(
-                            hoster=h['name'],
                             url=h['api_url'],
                             headers=headers,
                             org=org,
                             repo=repo
                         )
-                        pulls = self.get_gitea_prs(
-                            url=h['api_url'],
-                            headers=headers,
-                            gitea_org=org,
-                            repo=repo
-                        )
-                        if branches:
-                            result_branches = self.get_empty_branches(
-                                hoster=h['name'],
-                                org=org,
-                                repo=repo,
-                                pulls=pulls,
-                                branches=branches)
-                            empty_branches.extend(result_branches)
-
-            elif h['name'] == 'github':
-                headers = get_headers(
-                    hoster=h['name'],
-                    args=self.args
-                )
-                for org in h['orgs']:
-                    repos = self.get_github_repos(
-                        url=h['api_url'],
-                        headers=headers,
-                        github_org=org
-                    )
-                    for repo in repos:
-                        branches = self.get_branches(
+                        pulls = self.get_pull_requests(
                             hoster=h['name'],
-                            url=h['api_url'],
-                            headers=headers,
-                            org=org,
-                            repo=repo
-                        )
-                        pulls = self.get_github_prs(
                             url=h['api_url'],
                             headers=headers,
                             org=org,
