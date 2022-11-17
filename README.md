@@ -16,3 +16,7 @@ attentionlist pr list failed
 attentionlist zuul list errors
 attentionlist branch list empty
 ```
+
+## Configuration File
+
+For proper configuration a config file can be found in templates folder: https://github.com/opentelekomcloud-infra/attention-list/blob/main/templates/config.yaml
