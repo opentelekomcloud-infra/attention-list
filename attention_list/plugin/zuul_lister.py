@@ -15,6 +15,8 @@
 
 import requests
 
+from attention_list.helper.utils import check_config
+
 
 class ZuulLister:
     """
@@ -24,15 +26,6 @@ class ZuulLister:
     def __init__(self, config, args):
         self.config = config.get_config()
         self.args = args
-
-    def check_config(self):
-        if self.args.errors:
-            if self.args.unknown_repos:
-                raise Exception('Argument error: Zuul lister got more than '
-                                'one argument: ' + self.args)
-            if not self.config['zuul_list_errors']['url']:
-                raise Exception('Configuration error: url missing for '
-                                'zuul lister')
 
     def prepare_url(self, tenant):
         url = self.config['zuul_list_errors']['url']
@@ -73,7 +66,10 @@ class ZuulLister:
         return result
 
     def list(self):
-        self.check_config()
+        check_config(
+            command='zuul_list_errors',
+            args=self.args,
+            config=self.config)
         if self.args.errors:
             return self.create_result(self.list_errors())
         elif self.args.unknown_repos:

@@ -15,6 +15,7 @@
 
 import requests
 
+from attention_list.helper.utils import check_config
 from attention_list.helper.utils import create_result
 from attention_list.helper.utils import get_headers
 from attention_list.helper.utils import get_pull_requests
@@ -51,21 +52,6 @@ class BranchLister:
 
     def print_config(self):
         print(self.config)
-
-    def check_config(self):
-        if not self.config['branch_list_empty']['git_hoster']:
-            raise Exception('Config missing git_hoster entry.')
-        hoster = self.config['branch_list_empty']['git_hoster']
-        for h in hoster:
-            if h['name'] not in git_hoster:
-                raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
-            if not h['api_url']:
-                raise Exception('git_hoster[\'api_url\'] missing '
-                                'for git_hoster: ' + h['name'])
-            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
-                raise Exception('git_hoster[\'orgs\'] missing '
-                                'or not type of list for git_hoster: '
-                                + h['name'])
 
     def get_branches(self, url, headers, org, repo):
         """
@@ -142,7 +128,10 @@ class BranchLister:
         or more Git providers to collect all Branches having no open
         Pull Requests left and could be closed.
         """
-        self.check_config()
+        check_config(
+            command='branch_list_empty',
+            config=self.config
+        )
         self.hoster = self.config['branch_list_empty']['git_hoster']
 
         empty_branches = []

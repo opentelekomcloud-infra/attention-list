@@ -17,6 +17,52 @@ import os
 import requests
 
 
+git_hoster = ['gitea', 'github']
+
+
+def check_config(command, config, args=None):
+    if command == 'pr_list_failed':
+        if not config['pr_list_failed']['git_hoster']:
+            raise Exception('Config missing git_hoster entry.')
+        hoster = config['pr_list_failed']['git_hoster']
+        for h in hoster:
+            if h['name'] not in git_hoster:
+                raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
+            if not h['api_url']:
+                raise Exception('git_hoster[\'api_url\'] missing '
+                                'for git_hoster: ' + h['name'])
+            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
+                raise Exception('git_hoster[\'orgs\'] missing '
+                                'or not type of list for git_hoster: '
+                                + h['name'])
+    elif command == 'pr_list_orphans':
+        pass
+    elif command == 'zuul_list_errors':
+        if args.errors:
+            if args.unknown_repos:
+                raise Exception('Argument error: Zuul lister got more than '
+                                'one argument: ' + args)
+            if not config['zuul_list_errors']['url']:
+                raise Exception('Configuration error: url missing for '
+                                'zuul lister')
+    elif command == 'branch_list_empty':
+        if not config['branch_list_empty']['git_hoster']:
+            raise Exception('Config missing git_hoster entry.')
+        hoster = config['branch_list_empty']['git_hoster']
+        for h in hoster:
+            if h['name'] not in git_hoster:
+                raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
+            if not h['api_url']:
+                raise Exception('git_hoster[\'api_url\'] missing '
+                                'for git_hoster: ' + h['name'])
+            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
+                raise Exception('git_hoster[\'orgs\'] missing '
+                                'or not type of list for git_hoster: '
+                                + h['name'])
+    else:
+        raise Exception('check_config() issue; no proper command provided.')
+
+
 def create_result(items):
     """
     Create dictionary result list.

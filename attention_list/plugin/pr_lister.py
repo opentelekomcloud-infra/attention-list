@@ -16,6 +16,7 @@
 import requests
 import re
 
+from attention_list.helper.utils import check_config
 from attention_list.helper.utils import create_result
 from attention_list.helper.utils import get_headers
 from attention_list.helper.utils import get_pull_requests
@@ -62,21 +63,6 @@ class PrLister:
 
     def print_config(self):
         print(self.config)
-
-    def check_config(self):
-        if not self.config['pr_list_failed']['git_hoster']:
-            raise Exception('Config missing git_hoster entry.')
-        hoster = self.config['pr_list_failed']['git_hoster']
-        for h in hoster:
-            if h['name'] not in git_hoster:
-                raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
-            if not h['api_url']:
-                raise Exception('git_hoster[\'api_url\'] missing '
-                                'for git_hoster: ' + h['name'])
-            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
-                raise Exception('git_hoster[\'orgs\'] missing '
-                                'or not type of list for git_hoster: '
-                                + h['name'])
 
     def add_builds_to_obj(self, obj, url, tenant):
         """
@@ -205,7 +191,7 @@ class PrLister:
         Method to run through every repository in each organization of one
         or more Git providers.
         """
-        self.check_config()
+        check_config(command='pr_list_failed', config=self.config)
         self.hoster = self.config['pr_list_failed']['git_hoster']
 
         failed_commits = []

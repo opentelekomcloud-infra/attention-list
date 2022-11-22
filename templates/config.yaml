@@ -11,6 +11,14 @@ pr_list_failed:
       orgs:
         - docs
       repos:
+pr_list_orphans:
+  git_hoster:
+    - name: 'gitea'
+      api_url: 'https://gitea.eco.tsi-dev.otc-service.com/api/v1/'
+      orgs:
+        - docs
+      ref_repo: 'doc-exports'
+      exclude:
 zuul_list_errors:
   url: 'https://zuul.otc-service.com/'
   tenants:
