@@ -16,8 +16,10 @@
 import requests
 import re
 
-from attention_list.helper.utils import get_headers
 from attention_list.helper.utils import create_result
+from attention_list.helper.utils import get_headers
+from attention_list.helper.utils import get_pull_requests
+from attention_list.helper.utils import get_repos
 
 git_hoster = ['gitea', 'github']
 
@@ -76,67 +78,6 @@ class PrLister:
                                 'or not type of list for git_hoster: '
                                 + h['name'])
 
-    def get_gitea_repos(self, url, headers, gitea_org):
-        """
-        Get all Repositories of one Gitea orgainzation
-        """
-        repositories = []
-        i = 1
-
-        while True:
-            try:
-                req_url = (
-                    url
-                    + 'orgs/'
-                    + gitea_org
-                    + '/repos?limit=50&page='
-                    + str(i))
-                res = requests.request('GET', url=req_url, headers=headers)
-                i += 1
-                if res.json():
-                    for repo in res.json():
-                        repositories.append(repo)
-                    continue
-                else:
-                    break
-            except Exception as e:
-                print("Get Gitea Repos error: " + str(e))
-                print(
-                    "The request status is: "
-                    + str(res.status_code)
-                    + " | "
-                    + str(res.reason))
-                break
-        return repositories
-
-    def get_gitea_prs(self, url, headers, gitea_org, repo):
-        """
-        Collect all Pull Requests of a Gitea Repository
-        """
-        pullrequests = []
-
-        try:
-            req_url = (
-                url
-                + 'repos/'
-                + gitea_org
-                + '/'
-                + repo
-                + '/pulls?state=open')
-            res = requests.request('GET', url=req_url, headers=headers)
-            if res.json():
-                for pr in res.json():
-                    pullrequests.append(pr)
-        except Exception as e:
-            print("Get Gitea pullrequests error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res.status_code)
-                + " | "
-                + str(res.reason))
-            exit()
-        return pullrequests
-
     def add_builds_to_obj(self, obj, url, tenant):
         """
         This method trys to find all build jobs under a Zuul buildset.
@@ -162,64 +103,43 @@ class PrLister:
                 obj.jobs = jobs
         return obj
 
-    def get_github_repos(self, url, headers, github_org):
+    def get_failed_commits(self, hoster, pull, url, org, repo, headers):
         """
-        Get all repositories of one GitHub organization
+        Collect all Failed Pull Requests of a Git repository
         """
-        repositories = []
-        i = 1
-
-        while True:
+        failed_commits = []
+        if hoster == 'gitea':
+            req_url = (
+                url
+                + 'repos/'
+                + org
+                + '/'
+                + repo
+                + '/commits/'
+                + pull['head']['ref']
+                + '/statuses?limit=1')
             try:
-                req_url = url + 'orgs/' + github_org + '/repos?page=' + str(i)
                 res = requests.request('GET', url=req_url, headers=headers)
-                if res.json():
-                    for repo in res.json():
-                        if repo['archived'] is False:
-                            repositories.append(repo)
-                    i += 1
-                    continue
-                else:
-                    break
             except Exception as e:
-                print("Get Github repository error: " + str(e))
+                print("Get Gitea failed commits error: " + str(e))
                 print(
                     "The request status is: "
                     + str(res.status_code)
                     + " | "
                     + str(res.reason))
-                break
-        return repositories
-
-    def get_gitea_failed_commits(self, pull, url, gitea_org, repo, headers):
-        """
-        Collect all failed gitea commits of one repository.
-        """
-        failed_commits = []
-        try:
-            req_url = (
-                url
-                + 'repos/'
-                + gitea_org
-                + '/'
-                + repo['name']
-                + '/commits/'
-                + pull['head']['ref']
-                + '/statuses?limit=1')
-            res_sta = requests.request('GET', url=req_url, headers=headers)
-            if res_sta.json():
-                if res_sta.json()[0]['status'] == 'failure':
-                    zuul_url = res_sta.json()[0]['target_url']
+            if res.json():
+                if res.json()[0]['status'] == 'failure':
+                    zuul_url = res.json()[0]['target_url']
                     o = FailedPR(
                         host='gitea',
                         url=pull['url'],
-                        org=gitea_org,
-                        repo=repo['name'],
+                        org=org,
+                        repo=repo,
                         pullrequest=pull['title'],
-                        status=res_sta.json()[0]['status'],
+                        status=res.json()[0]['status'],
                         zuul_url=zuul_url,
                         created_at=pull['created_at'],
-                        updated_at=res_sta.json()[0]['updated_at'],
+                        updated_at=res.json()[0]['updated_at'],
                         error=1000
                     )
                     o = self.add_builds_to_obj(
@@ -228,109 +148,54 @@ class PrLister:
                         tenant='gl')
                     failed_commits.append(o)
 
-        except Exception as e:
-            print("Get Gitea failed commits error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res_sta.status_code)
-                + " | "
-                + str(res_sta.reason))
-        return failed_commits
-
-    def get_github_prs(self, url, headers, github_org, repo):
-        """
-        Get all Pull Requests of one GitHub repository
-        """
-        pullrequests = []
-        i = 1
-
-        while True:
-            try:
-                req_url = (
-                    url
-                    + 'repos/'
-                    + github_org
-                    + '/'
-                    + repo
-                    + '/pulls?state=open&page='
-                    + str(i))
-                res = requests.request('GET', url=req_url, headers=headers)
-                if res.json():
-                    for pr in res.json():
-                        pullrequests.append(pr)
-                    i += 1
-                    continue
-                else:
-                    break
-            except Exception as e:
-                print("Get GitHub pullrequests error: " + str(e))
-                print(
-                    "The request status is: "
-                    + str(res.status_code)
-                    + " | "
-                    + str(res.reason))
-                break
-        return pullrequests
-
-    def get_github_failed_commits(self, pull, url, github_org, repo, headers):
-        """
-        Collect all Failed Pull Requests of one GitHub repository
-        """
-        failed_commits = []
-        try:
+        elif hoster == 'github':
             req_url = (
                 url
                 + 'repos/'
-                + github_org
+                + org
                 + '/'
-                + repo['name']
+                + repo
                 + '/commits/'
                 + pull['head']['sha']
                 + '/check-runs')
-            res_sta = requests.request('GET', url=req_url, headers=headers)
-        except Exception as e:
-            print("Get GitHub failed commits error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res_sta.status_code)
-                + " | "
-                + str(res_sta.reason))
-
-        if res_sta.json():
-            if len(res_sta.json()['check_runs']) != 0:
-                if res_sta.json()['check_runs'][0]['conclusion'] == 'failure':
-                    zuul_url = res_sta.json()['check_runs'][0]['details_url']
+            try:
+                res = requests.request('GET', url=req_url, headers=headers)
+            except Exception as e:
+                print("Get GitHub failed commits error: " + str(e))
+            if res.json():
+                if len(res.json()['check_runs']) != 0:
+                    if res.json()['check_runs'][0]['conclusion'] == 'failure':
+                        zuul_url = res.json()['check_runs'][0]['details_url']
+                        o = FailedPR(
+                            host='github',
+                            url=pull['html_url'],
+                            org=org,
+                            repo=repo,
+                            pullrequest=pull['title'],
+                            status=res.json()['check_runs'][0]['conclusion'],
+                            zuul_url=zuul_url,
+                            created_at=pull['created_at'],
+                            updated_at=(res.json()['check_runs']
+                                        [0]['completed_at']),
+                            error=1000
+                        )
+                        o = self.add_builds_to_obj(
+                            obj=o,
+                            url=zuul_url,
+                            tenant='eco')
+                        failed_commits.append(o)
+                else:
                     o = FailedPR(
                         host='github',
                         url=pull['html_url'],
-                        org=github_org,
-                        repo=repo['name'],
+                        org=org,
+                        repo=repo,
                         pullrequest=pull['title'],
-                        status=res_sta.json()['check_runs'][0]['conclusion'],
-                        zuul_url=zuul_url,
                         created_at=pull['created_at'],
-                        updated_at=(res_sta.json()['check_runs']
-                                    [0]['completed_at']),
-                        error=1000
+                        updated_at=pull['updated_at'],
+                        error=1001,
                     )
-                    o = self.add_builds_to_obj(
-                        obj=o,
-                        url=zuul_url,
-                        tenant='eco')
                     failed_commits.append(o)
-            else:
-                o = FailedPR(
-                    host='github',
-                    url=pull['html_url'],
-                    org=github_org,
-                    repo=repo['name'],
-                    pullrequest=pull['title'],
-                    created_at=pull['created_at'],
-                    updated_at=pull['updated_at'],
-                    error=1001,
-                )
-                failed_commits.append(o)
-
         return failed_commits
 
     def list_failed_pr(self):
@@ -345,59 +210,38 @@ class PrLister:
 
         failed_commits = []
         for h in self.hoster:
-            if h['name'] == 'gitea':
+            if h['name'] == 'gitea' or h['name'] == 'github':
                 headers = get_headers(
                     hoster=h['name'],
                     args=self.args
                 )
                 for org in h['orgs']:
-                    repos = self.get_gitea_repos(
-                        url=h['api_url'],
-                        headers=headers,
-                        gitea_org=org
-                    )
-                    for repo in repos:
-                        pulls = self.get_gitea_prs(
+                    repos = []
+                    if h['repos']:
+                        repos = h['repos']
+                    else:
+                        repos = get_repos(
+                            hoster=h['name'],
                             url=h['api_url'],
                             headers=headers,
-                            gitea_org=org,
-                            repo=repo['name']
+                            org=org
+                        )
+                    for repo in repos:
+                        pulls = get_pull_requests(
+                            hoster=h['name'],
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org,
+                            repo=repo,
+                            state='open'
                         )
                         if pulls:
                             for pull in pulls:
-                                commits = self.get_gitea_failed_commits(
+                                commits = self.get_failed_commits(
+                                    hoster=h['name'],
                                     pull=pull,
                                     url=h['api_url'],
-                                    gitea_org=org,
-                                    repo=repo,
-                                    headers=headers
-                                )
-                                failed_commits.extend(commits)
-
-            elif h['name'] == 'github':
-                headers = get_headers(
-                    hoster=h['name'],
-                    args=self.args
-                )
-                for org in h['orgs']:
-                    repos = self.get_github_repos(
-                        url=h['api_url'],
-                        headers=headers,
-                        github_org=org
-                    )
-                    for repo in repos:
-                        pulls = self.get_github_prs(
-                            url=h['api_url'],
-                            headers=headers,
-                            github_org=org,
-                            repo=repo['name']
-                        )
-                        if pulls:
-                            for pull in pulls:
-                                commits = self.get_github_failed_commits(
-                                    pull=pull,
-                                    url=h['api_url'],
-                                    github_org=org,
+                                    org=org,
                                     repo=repo,
                                     headers=headers
                                 )
