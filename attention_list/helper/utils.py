@@ -20,45 +20,61 @@ import requests
 git_hoster = ['gitea', 'github']
 
 
+def check(udict, *args):
+    """
+    Method checks if an entry exists in upper dict and has a value
+    """
+    for a in args:
+        if a not in udict:
+            raise Exception('Param \'' + a + '\' is missing in '
+                            + str(udict))
+        if not udict[a]:
+            raise Exception('Value of \'' + a + '\' is missing in '
+                            + str(udict))
+
+
+def check_list(udict, *args):
+    """
+    Method checks if an entry exists in upper dict and has a value of type list
+    """
+    for a in args:
+        if a not in udict:
+            raise Exception('Param \'' + a + '\' is missing in '
+                            + str(udict))
+        if not isinstance(udict[a], list):
+            raise Exception('Value of \'' + a + '\' is not a type of list or '
+                            'does not exist in ' + str(udict))
+
+
 def check_config(command, config, args=None):
     if command == 'pr_list_failed':
-        if not config['pr_list_failed']['git_hoster']:
-            raise Exception('Config missing git_hoster entry.')
+        check(config, 'pr_list_failed')
+        check(config['pr_list_failed'], 'git_hoster')
+        check_list(config['pr_list_failed']['git_hoster'])
         hoster = config['pr_list_failed']['git_hoster']
         for h in hoster:
-            if h['name'] not in git_hoster:
-                raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
-            if not h['api_url']:
-                raise Exception('git_hoster[\'api_url\'] missing '
-                                'for git_hoster: ' + h['name'])
-            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
-                raise Exception('git_hoster[\'orgs\'] missing '
-                                'or not type of list for git_hoster: '
-                                + h['name'])
+            check(h, 'name', 'api_url', 'ref_repo')
+            check_list(h, 'orgs')
     elif command == 'pr_list_orphans':
-        pass
+        check(config, 'pr_list_orphans')
+        check(config['pr_list_orphans'], 'git_hoster')
+        check_list(config['pr_list_orphans']['git_hoster'])
+        hoster = config['pr_list_orphans']['git_hoster']
+        for h in hoster:
+            check(h, 'name', 'api_url', 'ref_repo')
+            check_list(h, 'orgs')
     elif command == 'zuul_list_errors':
-        if args.errors:
-            if args.unknown_repos:
-                raise Exception('Argument error: Zuul lister got more than '
-                                'one argument: ' + args)
-            if not config['zuul_list_errors']['url']:
-                raise Exception('Configuration error: url missing for '
-                                'zuul lister')
+        check(config, 'zuul_list_errors')
+        check(config['zuul_list_errors'], 'url')
+        check_list(config['zuul_list_errors'], 'tenants')
     elif command == 'branch_list_empty':
-        if not config['branch_list_empty']['git_hoster']:
-            raise Exception('Config missing git_hoster entry.')
+        check(config, 'branch_list_empty')
+        check(config['branch_list_empty'], 'git_hoster')
+        check_list(config['branch_list_empty']['git_hoster'])
         hoster = config['branch_list_empty']['git_hoster']
         for h in hoster:
-            if h['name'] not in git_hoster:
-                raise Exception('git_hoster[\'name\'] wrong: ' + h['name'])
-            if not h['api_url']:
-                raise Exception('git_hoster[\'api_url\'] missing '
-                                'for git_hoster: ' + h['name'])
-            if (not h['orgs']) or (not isinstance(h['orgs'], list)):
-                raise Exception('git_hoster[\'orgs\'] missing '
-                                'or not type of list for git_hoster: '
-                                + h['name'])
+            check(h, 'name', 'api_url', 'ref_repo')
+            check_list(h, 'orgs')
     else:
         raise Exception('check_config() issue; no proper command provided.')
 

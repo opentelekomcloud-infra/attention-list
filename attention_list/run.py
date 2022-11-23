@@ -178,7 +178,7 @@ class AttentionList:
         lister = pr_lister.PrLister(
             config=self.config,
             args=self.args)
-        self.create_result(lister.list_failed_pr())
+        self.create_result(lister.list())
 
     # Zuul Subparsers
     def add_zuul_subparser(self, subparsers):

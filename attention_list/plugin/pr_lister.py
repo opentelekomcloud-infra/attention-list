@@ -184,6 +184,18 @@ class PrLister:
                     failed_commits.append(o)
         return failed_commits
 
+    def list(self):
+        if self.args.failed:
+            self.list_failed_pr()
+        elif self.args.orphans:
+            self.list_orphans()
+        elif self.args.timeout:
+            pass
+        elif self.args.older:
+            pass
+        else:
+            raise Exception('PrLister.list() failed due to missing arguments')
+
     def list_failed_pr(self):
         """
         command: pr list failed
@@ -234,3 +246,63 @@ class PrLister:
                                 failed_commits.extend(commits)
 
         return create_result(failed_commits)
+
+    def list_orphans(self):
+        """
+        command: pr list --orphans
+
+        This method uses a defined repository of a Git provider as reference.
+        All Pull Requests of this repo are collected and the stati are
+        listed in a dict. The referenced PRs in other repositories are
+        searched and the corresponding states are checked.
+        An orphan PR is listed if the reference PR is closed and the
+        linked PR remains open. If all "Service PRs" are closed and the
+        reference PR is still open, than the reference is an orphan and will
+        be listed.
+        """
+        check_config(command='pr_list_orphans', config=self.config)
+        self.hoster = self.config['pr_list_orphans']['git_hoster']
+
+        matrix = {}
+        exit()
+        for h in self.hoster:
+            if h['name'] == 'gitea' or h['name'] == 'github':
+                headers = get_headers(
+                    hoster=h['name'],
+                    args=self.args
+                )
+                for org in h['orgs']:
+                    pass
+                    # ref_repo = h['ref_repo']
+                    # repos = []
+                    # if h['repos']:
+                    #     repos = h['repos']
+                    # else:
+                    #     repos = get_repos(
+                    #         hoster=h['name'],
+                    #         url=h['api_url'],
+                    #         headers=headers,
+                    #         org=org
+                    #     )
+                    # for repo in repos:
+                    #     pulls = get_pull_requests(
+                    #         hoster=h['name'],
+                    #         url=h['api_url'],
+                    #         headers=headers,
+                    #         org=org,
+                    #         repo=repo,
+                    #         state='open'
+                    #     )
+                    #     if pulls:
+                    #         for pull in pulls:
+                    #             commits = self.get_failed_commits(
+                    #                 hoster=h['name'],
+                    #                 pull=pull,
+                    #                 url=h['api_url'],
+                    #                 org=org,
+                    #                 repo=repo,
+                    #                 headers=headers
+                    #             )
+                    #             failed_commits.extend(commits)
+
+        # return create_result(failed_commits)
