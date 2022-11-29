@@ -25,6 +25,18 @@ from attention_list.helper.utils import get_repos
 git_hoster = ['gitea', 'github']
 
 
+class OrphanPR:
+    def __init__(
+            self,
+            title,
+            url,
+            state=None):
+
+        self.title = title
+        self.url = url
+        self.state = state
+
+
 class FailedPR:
     """Base class for failed Pull Requests"""
     def __init__(
@@ -186,9 +198,9 @@ class PrLister:
 
     def list(self):
         if self.args.failed:
-            self.list_failed_pr()
+            return self.list_failed_pr()
         elif self.args.orphans:
-            self.list_orphans()
+            return self.list_orphans()
         elif self.args.timeout:
             pass
         elif self.args.older:
@@ -264,7 +276,7 @@ class PrLister:
         self.hoster = self.config['pr_list_orphans']['git_hoster']
 
         matrix = {}
-        exit()
+        orphans = []
         for h in self.hoster:
             if h['name'] == 'gitea' or h['name'] == 'github':
                 headers = get_headers(
@@ -272,37 +284,84 @@ class PrLister:
                     args=self.args
                 )
                 for org in h['orgs']:
-                    pass
-                    # ref_repo = h['ref_repo']
-                    # repos = []
-                    # if h['repos']:
-                    #     repos = h['repos']
-                    # else:
-                    #     repos = get_repos(
-                    #         hoster=h['name'],
-                    #         url=h['api_url'],
-                    #         headers=headers,
-                    #         org=org
-                    #     )
-                    # for repo in repos:
-                    #     pulls = get_pull_requests(
-                    #         hoster=h['name'],
-                    #         url=h['api_url'],
-                    #         headers=headers,
-                    #         org=org,
-                    #         repo=repo,
-                    #         state='open'
-                    #     )
-                    #     if pulls:
-                    #         for pull in pulls:
-                    #             commits = self.get_failed_commits(
-                    #                 hoster=h['name'],
-                    #                 pull=pull,
-                    #                 url=h['api_url'],
-                    #                 org=org,
-                    #                 repo=repo,
-                    #                 headers=headers
-                    #             )
-                    #             failed_commits.extend(commits)
+                    ref_pulls = get_pull_requests(
+                        hoster=h['name'],
+                        url=h['api_url'],
+                        headers=headers,
+                        org=org,
+                        repo=h['ref_repo'],
+                        state='open'
+                    )
+                    for pull in ref_pulls:
+                        matrix[str(pull['number'])] = {
+                            'title': pull['title'],
+                            'url': pull['url'],
+                            'state': pull['state'],
+                            'pulls': []
+                        }
+                    repos = []
+                    if h['repos']:
+                        repos = h['repos']
+                    else:
+                        repos = get_repos(
+                            hoster=h['name'],
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org
+                        )
+                    for repo in repos:
+                        if repo == h['ref_repo']:
+                            continue
+                        pulls = get_pull_requests(
+                            hoster=h['name'],
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org,
+                            repo=repo,
+                        )
+                        if pulls:
+                            for pull in pulls:
+                                ref_num = re.findall(
+                                    r"docs\/doc-exports#([\d]+)",
+                                    pull['title'])
+                                if ref_num:
+                                    if ref_num[0] in matrix:
+                                        pull_format = {
+                                            'title': pull['title'],
+                                            'url': pull['url'],
+                                            'state': pull['state']
+                                        }
+                                        matrix[ref_num[0]]['pulls'].append(
+                                            pull_format
+                                        )
+                                    else:
+                                        if pull['state'] == 'open':
+                                            o = OrphanPR(
+                                                title=pull['title'],
+                                                url=pull['url'],
+                                                state=pull['state']
+                                            )
+                                            orphans.append(o)
+                for item in matrix:
+                    if not matrix[item]['pulls']:
+                        o = OrphanPR(
+                            title=matrix[item]['title'],
+                            url=matrix[item]['url'],
+                            state=matrix[item]['state']
+                        )
+                        orphans.append(o)
+                    else:
+                        state_open = False
+                        for p in matrix[item]['pulls']:
+                            if p['state'] == 'open':
+                                state_open = True
 
-        # return create_result(failed_commits)
+                        if not state_open:
+                            o = OrphanPR(
+                                title=matrix[item]['title'],
+                                url=matrix[item]['url'],
+                                state=matrix[item]['state']
+                            )
+                            orphans.append(o)
+
+        return create_result(orphans)

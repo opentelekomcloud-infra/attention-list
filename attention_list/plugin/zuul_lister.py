@@ -73,4 +73,4 @@ class ZuulLister:
         if self.args.errors:
             return self.create_result(self.list_errors())
         elif self.args.unknown_repos:
-            return self.create_result(['no repos found'])
+            return self.create_result(['ToDo in Zuul lister'])

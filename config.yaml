@@ -19,6 +19,7 @@ pr_list_orphans:
         - docs
       ref_repo: 'doc-exports'
       exclude:
+      repos:
 zuul_list_errors:
   url: 'https://zuul.otc-service.com/'
   tenants:

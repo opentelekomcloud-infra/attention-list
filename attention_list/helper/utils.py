@@ -53,7 +53,7 @@ def check_config(command, config, args=None):
         check_list(config['pr_list_failed']['git_hoster'])
         hoster = config['pr_list_failed']['git_hoster']
         for h in hoster:
-            check(h, 'name', 'api_url', 'ref_repo')
+            check(h, 'name', 'api_url')
             check_list(h, 'orgs')
     elif command == 'pr_list_orphans':
         check(config, 'pr_list_orphans')
@@ -81,7 +81,7 @@ def check_config(command, config, args=None):
 
 def create_result(items):
     """
-    Create dictionary result list.
+    Create dictionary result list from objects
     """
     result = {}
     result['meta'] = {}
@@ -94,7 +94,6 @@ def create_result(items):
         result['data'] = items_json
     else:
         result['meta']['count'] = 0
-
     return result
 
 
@@ -149,28 +148,35 @@ def get_pull_requests(hoster, url, headers, org, repo, state=None):
     pullrequests = []
 
     if hoster == 'gitea':
-        req_url = (
-            url
-            + 'repos/'
-            + org
-            + '/'
-            + repo
-            + '/pulls')
-        if state:
-            req_url = req_url + '?state=' + state
-        try:
-            res = requests.request('GET', url=req_url, headers=headers)
-            if res.json():
-                for pr in res.json():
-                    pullrequests.append(pr)
-        except Exception as e:
-            print("get_pull_requests error: " + str(e))
-            print(
-                "The request status is: "
-                + str(res.status_code)
-                + " | "
-                + str(res.reason))
-            exit()
+        i = 1
+        while True:
+            req_url = (
+                url
+                + 'repos/'
+                + org
+                + '/'
+                + repo
+                + '/pulls?page='
+                + str(i))
+            if state:
+                req_url = req_url + '&state=' + state
+            try:
+                res = requests.request('GET', url=req_url, headers=headers)
+                if res.json():
+                    for pr in res.json():
+                        pullrequests.append(pr)
+                    i += 1
+                    continue
+                else:
+                    break
+            except Exception as e:
+                print("get_pull_requests error: " + str(e))
+                print(
+                    "The request status is: "
+                    + str(res.status_code)
+                    + " | "
+                    + str(res.reason))
+                exit()
     elif hoster == 'github':
         i = 1
         while True:
