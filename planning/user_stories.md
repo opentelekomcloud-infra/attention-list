@@ -32,11 +32,6 @@ Site note: 3 hours timeout for Zuul checkrun / job
 
 al pull request list timeout
 
-### User Story: PR doc-export is closed but specific PR remains open  
-A user runs the tool to list all issues where a Pull Request in doc-export repository has been closed but the corresponding Pull Request in the specific service repository remains open.
-
-al pull request list orphans
-
 ### User Story: Old Pull Requests
 A user runs the tool to list all Pull Requests older then a particular age.
 
@@ -75,3 +70,8 @@ al pull request list failed
 A user runs the tool to list all branches which do not have open Pull Request at all and might be deleted.
 
 al branch list empty
+
+### User Story: PR doc-export is closed but specific PR remains open  
+A user runs the tool to list all issues where a Pull Request in doc-export repository has been closed but the corresponding Pull Request in the specific service repository remains open.
+
+al pull request list orphans
