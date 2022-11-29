@@ -12,9 +12,10 @@ python setup.py develop
 ## Available commands
 
 ```
-attentionlist pr list failed
-attentionlist zuul list errors
-attentionlist branch list empty
+attentionlist pr list --failed
+attentionlist pr list --orphans
+attentionlist zuul list --errors
+attentionlist branch list --empty
 ```
 
 ## Configuration File
