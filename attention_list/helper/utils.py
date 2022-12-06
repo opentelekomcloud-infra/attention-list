@@ -22,7 +22,7 @@ git_hoster = ['gitea', 'github']
 
 def check(udict, *args):
     """
-    Method checks if an entry exists in upper dict and has a value
+    Method checks if an entry exists in upper dict (udict) and has a value
     """
     for a in args:
         if a not in udict:
@@ -52,6 +52,14 @@ def check_config(command, config, args=None):
         check(config['pr_list_failed'], 'git_hoster')
         check_list(config['pr_list_failed']['git_hoster'])
         hoster = config['pr_list_failed']['git_hoster']
+        for h in hoster:
+            check(h, 'name', 'api_url')
+            check_list(h, 'orgs')
+    if command == 'pr_list_older':
+        check(config, 'pr_list_older')
+        check(config['pr_list_older'], 'git_hoster')
+        check_list(config['pr_list_older']['git_hoster'])
+        hoster = config['pr_list_older']['git_hoster']
         for h in hoster:
             check(h, 'name', 'api_url')
             check_list(h, 'orgs')
@@ -89,7 +97,10 @@ def create_result(items):
     if len(items) != 0:
         items_json = []
         for obj in items:
-            items_json.append(vars(obj))
+            if isinstance(obj, dict):
+                items_json.append(obj)
+            else:
+                items_json.append(vars(obj))
         result['meta']['count'] = len(items_json)
         result['data'] = items_json
     else:

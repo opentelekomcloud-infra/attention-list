@@ -11,6 +11,18 @@ pr_list_failed:
       orgs:
         - docs
       repos:
+pr_list_older:
+  git_hoster:
+    - name: 'github'
+      api_url: 'https://api.github.com/'
+      orgs:
+        - 'opentelekomcloud-docs'
+      repos:
+    - name: 'gitea'
+      api_url: 'https://gitea.eco.tsi-dev.otc-service.com/api/v1/'
+      orgs:
+        - docs
+      repos:
 pr_list_orphans:
   git_hoster:
     - name: 'gitea'
@@ -19,6 +31,7 @@ pr_list_orphans:
         - docs
       ref_repo: 'doc-exports'
       exclude:
+      repos:
 zuul_list_errors:
   url: 'https://zuul.otc-service.com/'
   tenants:

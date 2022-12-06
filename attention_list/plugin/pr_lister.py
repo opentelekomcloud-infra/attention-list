@@ -15,6 +15,8 @@
 
 import requests
 import re
+import datetime as dt
+import dateutil.parser
 
 from attention_list.helper.utils import check_config
 from attention_list.helper.utils import create_result
@@ -23,6 +25,28 @@ from attention_list.helper.utils import get_pull_requests
 from attention_list.helper.utils import get_repos
 
 git_hoster = ['gitea', 'github']
+
+
+class PR:
+    def __init__(
+            self,
+            created_at,
+            updated_at,
+            hoster,
+            org,
+            repo,
+            title,
+            url,
+            state=None):
+
+        self.created_at = created_at
+        self.hoster = hoster
+        self.org = org
+        self.repo = repo
+        self.title = title
+        self.updated_at = updated_at
+        self.url = url
+        self.state = state
 
 
 class OrphanPR:
@@ -196,6 +220,60 @@ class PrLister:
                     failed_commits.append(o)
         return failed_commits
 
+    def get_old_pulls(self, hoster, now, org, pulls, repo, days):
+        """
+        Get Pull Requests of a specific Git Repo which are older than
+        specified value of days.
+
+        :param hoster: Name of Git hoster
+        :type hoster: string
+        :param now: datetime object of the current time in UTC
+        :type now: _type_
+        :param org: Name of the current organization
+        :type org: string
+        :param repo: Name of the current repo
+        :type repo:
+        :param pulls: List of Pull Requests in dict format
+        :type pulls: list
+        :param args: string objects which represents the time difference
+        of 'now'
+        :returns: List of Pull Requests older than the time arguments
+        :rtype: list
+        """
+        old_pulls = []
+        seconds = days * 86400
+
+        for pull in pulls:
+            pull_time = dateutil.parser.isoparse(pull['created_at'])
+            time_diff = (now - pull_time).total_seconds()
+            if time_diff > seconds:
+                if hoster == 'gitea':
+                    obj = PR(
+                        created_at=pull['created_at'],
+                        hoster=hoster,
+                        org=org,
+                        repo=repo,
+                        title=pull['title'],
+                        updated_at=pull['updated_at'],
+                        url=pull['html_url'],
+                        state=pull['state']
+                    )
+                    old_pulls.append(obj)
+                if hoster == 'github':
+                    obj = PR(
+                        created_at=pull['created_at'],
+                        hoster=hoster,
+                        org=org,
+                        repo=repo,
+                        title=pull['title'],
+                        updated_at=pull['updated_at'],
+                        url=pull['html_url'],
+                        state=pull['state']
+                    )
+                    old_pulls.append(obj)
+
+        return old_pulls
+
     def list(self):
         if self.args.failed:
             return self.list_failed_pr()
@@ -204,7 +282,7 @@ class PrLister:
         elif self.args.timeout:
             pass
         elif self.args.older:
-            pass
+            return self.list_older_pr()
         else:
             raise Exception('PrLister.list() failed due to missing arguments')
 
@@ -213,7 +291,7 @@ class PrLister:
         command: pr list failed
 
         Method to run through every repository in each organization of one
-        or more Git providers.
+        or more Git providers to get failed PR.
         """
         check_config(command='pr_list_failed', config=self.config)
         self.hoster = self.config['pr_list_failed']['git_hoster']
@@ -263,13 +341,12 @@ class PrLister:
         """
         command: pr list --orphans
 
-        This method uses a defined repository of a Git provider as reference.
-        All Pull Requests of this repo are collected and the stati are
-        listed in a dict. The referenced PRs in other repositories are
-        searched and the corresponding states are checked.
+        This method uses a defined repository as reference.
+        The subsidiary PRs in other repositories are
+        searched and the states are checked.
         An orphan PR is listed if the reference PR is closed and the
-        linked PR remains open. If all "Service PRs" are closed and the
-        reference PR is still open, than the reference is an orphan and will
+        linked PR remains open. If all linked PRs are closed and the
+        reference PR is still open, than the reference PR is an orphan and will
         be listed.
         """
         check_config(command='pr_list_orphans', config=self.config)
@@ -365,3 +442,55 @@ class PrLister:
                             orphans.append(o)
 
         return create_result(orphans)
+
+    def list_older_pr(self):
+        """
+        command: pr list --older <age>
+
+        Method to run through every repository in each organization of one
+        or more Git providers.
+        """
+        check_config(command='pr_list_older', config=self.config)
+        self.hoster = self.config['pr_list_older']['git_hoster']
+
+        now = dt.datetime.now(dt.timezone.utc)
+
+        old_pulls = []
+        for h in self.hoster:
+            if h['name'] == 'gitea' or h['name'] == 'github':
+                headers = get_headers(
+                    hoster=h['name'],
+                    args=self.args
+                )
+                for org in h['orgs']:
+                    repos = []
+                    if h['repos']:
+                        repos = h['repos']
+                    else:
+                        repos = get_repos(
+                            hoster=h['name'],
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org
+                        )
+                    for repo in repos:
+                        pulls = get_pull_requests(
+                            hoster=h['name'],
+                            url=h['api_url'],
+                            headers=headers,
+                            org=org,
+                            repo=repo,
+                            state='open'
+                        )
+                        if pulls:
+                            old_prs = self.get_old_pulls(
+                                days=self.args.older,
+                                hoster=h['name'],
+                                pulls=pulls,
+                                now=now,
+                                org=org,
+                                repo=repo,
+                            )
+                            old_pulls.extend(old_prs)
+
+        return create_result(old_pulls)

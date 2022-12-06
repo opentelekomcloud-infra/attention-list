@@ -13,6 +13,7 @@ python setup.py develop
 
 ```
 attentionlist pr list --failed
+attentionlist pr list --older <days>
 attentionlist pr list --orphans
 attentionlist zuul list --errors
 attentionlist branch list --empty

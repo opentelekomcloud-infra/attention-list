@@ -32,11 +32,6 @@ Site note: 3 hours timeout for Zuul checkrun / job
 
 al pull request list timeout
 
-### User Story: Old Pull Requests
-A user runs the tool to list all Pull Requests older then a particular age.
-
-al pull request list older <age>
-
 ### User Story: Not existing Repositories required by metadata
 A user runs the tool to list all not existing repositories which are required by metadata (vgl. metadata/services.yaml with github / gitea).
 
@@ -75,3 +70,8 @@ al branch list empty
 A user runs the tool to list all issues where a Pull Request in doc-export repository has been closed but the corresponding Pull Request in the specific service repository remains open.
 
 al pull request list orphans
+
+### User Story: Old Pull Requests
+A user runs the tool to list all Pull Requests older then a particular age.
+
+al pull request list older <days>

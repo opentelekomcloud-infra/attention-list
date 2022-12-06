@@ -5,3 +5,4 @@
 pbr
 pyYAML
 requests
+python-dateutil
